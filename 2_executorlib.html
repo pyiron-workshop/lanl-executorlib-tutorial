@@ -63,6 +63,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = '2_executorlib';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Workflows" href="3_workflows.html" />
     <link rel="prev" title="Flux" href="1_flux.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -165,6 +166,9 @@
 <li class="toctree-l1"><a class="reference internal" href="0_slurm.html">SLURM</a></li>
 <li class="toctree-l1"><a class="reference internal" href="1_flux.html">Flux</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">executorlib</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_workflows.html">Workflows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_application.html">Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_developer.html">Developer</a></li>
 </ul>
 
     </div>
@@ -353,6 +357,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block Allocation</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initialization-function">Initialization function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nested-executors">Nested Executors</a></li>
 </ul>
 </li>
 </ul>
@@ -392,7 +397,7 @@
 </div>
 </div>
 </div>
-<p>This can be rewritten using either the <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> or the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code>:</p>
+<p>This can be rewritten using either the <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> or the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code>. In both cases we are using a <code class="docutils literal notranslate"><span class="pre">with</span></code> statement to start the executor and close it again once all tasks are completed. The <code class="docutils literal notranslate"><span class="pre">with</span></code> statement in this case helps to prevent orphan processes, just like a <code class="docutils literal notranslate"><span class="pre">with</span></code> statement is used for opening and closing files to make sure the file is closed correctly even if the routine reading the file fails.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
@@ -540,10 +545,10 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4iy2NzT jovyan   executorl+ CD      1      1   1.254s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4fhFxvK jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4cYuVFu jovyan   executorl+ CD      1      1   1.151s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4ZP52K9 jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7NTi2F9 jovyan   executorl+ CD      1      1   1.182s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7KNKX9R jovyan   executorl+ CD      1      1   1.175s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7GFT2mM jovyan   executorl+ CD      1      1   1.211s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7D1AbyZ jovyan   executorl+ CD      1      1   1.197s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
 
 </pre></div>
 </div>
@@ -599,44 +604,80 @@
       <td>{}</td>
       <td>2</td>
       <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
-      <td>0.001279</td>
-      <td>135459241984</td>
+      <td>0.001330</td>
+      <td>236290310144</td>
       <td>None</td>
       <td>/home/jovyan/executorlib_cache/sum5684c948e337...</td>
     </tr>
     <tr>
       <th>1</th>
+      <td>&lt;function calc_add at 0x7f8e77252de0&gt;</td>
+      <td>[2, &lt;executorlib.task_scheduler.file.shared.Fu...</td>
+      <td>{}</td>
+      <td>3</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001926</td>
+      <td>382956732416</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/calc_add0a7cba1...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>&lt;function calc_add at 0x7f8dc717b2e0&gt;</td>
+      <td>[1, 0]</td>
+      <td>{}</td>
+      <td>1</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001483</td>
+      <td>380742139904</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/calc_add2c62f7d...</td>
+    </tr>
+    <tr>
+      <th>3</th>
       <td>&lt;built-in function sum&gt;</td>
       <td>[[3, 3]]</td>
       <td>{}</td>
       <td>6</td>
       <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
-      <td>0.001323</td>
-      <td>139603214336</td>
+      <td>0.001356</td>
+      <td>240467836928</td>
       <td>None</td>
       <td>/home/jovyan/executorlib_cache/sumc17e02a6dc40...</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>4</th>
+      <td>&lt;function calc_add at 0x7f8dc717a520&gt;</td>
+      <td>[3, &lt;executorlib.task_scheduler.file.shared.Fu...</td>
+      <td>{}</td>
+      <td>6</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001995</td>
+      <td>384986775552</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/calc_add08f0442...</td>
+    </tr>
+    <tr>
+      <th>5</th>
       <td>&lt;built-in function sum&gt;</td>
       <td>[[4, 4]]</td>
       <td>{}</td>
       <td>8</td>
       <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
-      <td>0.001545</td>
-      <td>141750697984</td>
+      <td>0.001412</td>
+      <td>242497880064</td>
       <td>None</td>
       <td>/home/jovyan/executorlib_cache/sumf3976430477e...</td>
     </tr>
     <tr>
-      <th>3</th>
+      <th>6</th>
       <td>&lt;built-in function sum&gt;</td>
       <td>[[2, 2]]</td>
       <td>{}</td>
       <td>4</td>
       <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
-      <td>0.001467</td>
-      <td>137539616768</td>
+      <td>0.001308</td>
+      <td>238421016576</td>
       <td>None</td>
       <td>/home/jovyan/executorlib_cache/sum3d89b9dcf89b...</td>
     </tr>
@@ -763,15 +804,15 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZW jovyan   python     CD      1      1   0.167s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZV jovyan   python     CD      1      1   0.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDnbjpK jovyan   python     CD      1      1   0.199s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDp5j6f jovyan   python     CD      1      1   0.158s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒAA1PmGT jovyan   executorl+ CD      1      1   2.661s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4iy2NzT jovyan   executorl+ CD      1      1   1.254s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4fhFxvK jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4cYuVFu jovyan   executorl+ CD      1      1   1.151s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4ZP52K9 jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGgpiFeo jovyan   python     CD      1      1   0.164s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGgoEGNT jovyan   python     CD      1      1   0.157s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGeDVWud jovyan   python     CD      1      1   0.164s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGeDVWue jovyan   python     CD      1      1   0.158s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒEZK45xb jovyan   executorl+ CD      1      1   2.620s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7NTi2F9 jovyan   executorl+ CD      1      1   1.182s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7KNKX9R jovyan   executorl+ CD      1      1   1.175s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7GFT2mM jovyan   executorl+ CD      1      1   1.211s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7D1AbyZ jovyan   executorl+ CD      1      1   1.197s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
 
 </pre></div>
 </div>
@@ -810,16 +851,16 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒELUpJVV jovyan   python     CD      1      1   0.175s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZW jovyan   python     CD      1      1   0.167s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZV jovyan   python     CD      1      1   0.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDnbjpK jovyan   python     CD      1      1   0.199s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDp5j6f jovyan   python     CD      1      1   0.158s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒAA1PmGT jovyan   executorl+ CD      1      1   2.661s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4iy2NzT jovyan   executorl+ CD      1      1   1.254s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4fhFxvK jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4cYuVFu jovyan   executorl+ CD      1      1   1.151s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
-<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4ZP52K9 jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒJfpgYWB jovyan   python     CD      1      1   0.169s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGgpiFeo jovyan   python     CD      1      1   0.164s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGgoEGNT jovyan   python     CD      1      1   0.157s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGeDVWud jovyan   python     CD      1      1   0.164s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒGeDVWue jovyan   python     CD      1      1   0.158s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒEZK45xb jovyan   executorl+ CD      1      1   2.620s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7NTi2F9 jovyan   executorl+ CD      1      1   1.182s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7KNKX9R jovyan   executorl+ CD      1      1   1.175s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7GFT2mM jovyan   executorl+ CD      1      1   1.211s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ7D1AbyZ jovyan   executorl+ CD      1      1   1.197s jupyter-janj-lanl-executorlib-tutorial-5rv11ome</span>
 
 </pre></div>
 </div>
@@ -900,6 +941,36 @@
 </div>
 </div>
 </section>
+<section id="nested-executors">
+<h3>Nested Executors<a class="headerlink" href="#nested-executors" title="Link to this heading">#</a></h3>
+<p>The hierarchical nature of the flux job scheduler allows the creation of additional executorlib Executors inside the functions submitted to the Executor. This hierarchy can be beneficial to separate the logic to saturate the available computational resources.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calc_nested</span><span class="p">():</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
+
+    <span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">fs</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">,</span> <span class="n">flux_executor_nesting</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">calc_nested</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+</div>
+</div>
+</section>
 </section>
 </section>
 
@@ -942,6 +1013,15 @@
         <p class="prev-next-title">Flux</p>
       </div>
     </a>
+    <a class="right-next"
+       href="3_workflows.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Workflows</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
 </div>
                 </footer>
               
@@ -972,6 +1052,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block Allocation</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initialization-function">Initialization function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nested-executors">Nested Executors</a></li>
 </ul>
 </li>
 </ul>
