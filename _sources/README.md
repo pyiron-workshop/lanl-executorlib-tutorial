@@ -6,7 +6,7 @@ Tutorial to introduce executorlib at Los Alamos National Laboratory (LANL) on We
 
 Additional links for this tutorial: 
 
-| [Repository](https://github.com/pyiron-workshop/lanl-executorlib-tutorial/) | Website | [Mybinder](https://notebooks.mpcdf.mpg.de/binder/v2/gl/janj%2Flanl-executorlib-tutorial/HEAD) |
+| [Repository](https://github.com/pyiron-workshop/lanl-executorlib-tutorial/) | [Website](https://workshop.pyiron.org/lanl-executorlib-tutorial) | [Mybinder](https://notebooks.mpcdf.mpg.de/binder/v2/gl/janj%2Flanl-executorlib-tutorial/HEAD) |
 |-----------------------------------------------------------------------------|---------|----------|
 
 The goal of the tutorial is to provide a general introduction to executorlib to simplify the submission of Python functions to a job scheduler, like Simple Linux Utility for Resource Management (SLURM). 
