@@ -15,4 +15,5 @@ dependencies:
 # only for application notebook 
 - atomistics =0.3.4
 - gpaw =25.7.0
-- qe =7.5 
+- qe =7.5
+- tqdm =4.67.3 

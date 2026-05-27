@@ -4,3 +4,4 @@ chapters:
 - file: 0_slurm.ipynb
 - file: 1_flux.ipynb
 - file: 2_executorlib.ipynb
+- file: 3_workflows.ipynb
