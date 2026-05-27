@@ -9,6 +9,9 @@ dependencies:
 - pysqa =0.4.1
 - h5py =3.16.0
 - openmpi =5.0.10
+# visualize dependencies
+- networkx =3.6.1
+- pygraphviz =1.14
 # only for application notebook 
 - atomistics =0.3.4
 - gpaw =25.7.0
