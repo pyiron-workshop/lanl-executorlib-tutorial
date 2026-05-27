@@ -1,0 +1,1031 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>executorlib &#8212; LANL executorlib Tutorial</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '2_executorlib';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Flux" href="1_flux.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="README.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">LANL executorlib Tutorial</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="README.html">
+                    LANL Executorlib Tutorial
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="0_slurm.html">SLURM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="1_flux.html">Flux</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">executorlib</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-launch-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Launch interactive content">
+    <i class="fas fa-rocket"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://mybinder.org/v2/gh/pyiron-workshop/lanl-executorlib-tutorial/master?urlpath=lab/tree/2_executorlib.ipynb" target="_blank"
+   class="btn btn-sm dropdown-item"
+   title="Launch on Binder"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  
+    <img alt="Binder logo" src="_static/images/logo_binder.svg">
+  </span>
+<span class="btn__text-container">Binder</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/2_executorlib.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>executorlib</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-standard-library">Python Standard Library</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#executor-types">Executor Types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#singlenodeexecutor">SingleNodeExecutor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cache">Cache</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#submission-template">Submission Template</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi-parallel-functions">MPI parallel functions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block Allocation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initialization-function">Initialization function</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="executorlib">
+<h1>executorlib<a class="headerlink" href="#executorlib" title="Link to this heading">#</a></h1>
+<section id="python-standard-library">
+<h2>Python Standard Library<a class="headerlink" href="#python-standard-library" title="Link to this heading">#</a></h2>
+<p>executorlib is based on the <code class="docutils literal notranslate"><span class="pre">Executor</span></code> interface defined in the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html">Python Standard Library</a>. The Python Standard Library, defines two interfaces:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> for executing individual Python functions in separate threads.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> for executing individual Python functions in separate processes.</p></li>
+</ul>
+<p>Let’s take the following example:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result_lst</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+    <span class="n">result_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">sum</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+<span class="n">result_lst</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<p>This can be rewritten using either the <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> or the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code>:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+
+<span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[True, True, True, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessPoolExecutor</span>
+
+<span class="k">with</span> <span class="n">ProcessPoolExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[False, False, False, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<p>By using the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future">concurrent.futures.Future</a> objects we can develop asynchronous Python scripts. Specifically the Python functions are executed in the background until <code class="docutils literal notranslate"><span class="pre">result()</span></code> is called.</p>
+</section>
+<section id="executor-types">
+<h2>Executor Types<a class="headerlink" href="#executor-types" title="Link to this heading">#</a></h2>
+<p>Executorlib currently implements five different Executor classes:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Communication</p></th>
+<th class="head"><p>Application</p></th>
+<th class="head"><p>Internal Command</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code></p></td>
+<td><p>Socket</p></td>
+<td><p>Workstation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Popen()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code></p></td>
+<td><p>Files</p></td>
+<td><p>HPC</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sbatch</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code></p></td>
+<td><p>Socket</p></td>
+<td><p>HPC</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">srun</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code></p></td>
+<td><p>Files</p></td>
+<td><p>HPC</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code></p></td>
+<td><p>Socket</p></td>
+<td><p>HPC</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>In the following the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code>, <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> are introduced. The <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> behave analog to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and the <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> behaves analog to the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>, so they are not introduced here as SLURM is not available in the demonstration environment.</p>
+</section>
+<section id="singlenodeexecutor">
+<h2>SingleNodeExecutor<a class="headerlink" href="#singlenodeexecutor" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> is designed to start developing HPC workflows on your workstation. It internally works similar to the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> but supports a number of the more advanced functions introduced below. To switch from the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> to the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> you just have to update the name of the executor.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SingleNodeExecutor</span>
+
+<span class="k">with</span> <span class="n">SingleNodeExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[False, False, False, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="fluxclusterexecutor">
+<h2>FluxClusterExecutor<a class="headerlink" href="#fluxclusterexecutor" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> submits Python functions from the login node to individual compute nodes. It is using file based communication, so the executor can be stopped while the functions are still waiting in the queue.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
+
+<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[False, False, False, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span><span class="nb">jobs</span><span class="w"> </span>-a
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4iy2NzT jovyan   executorl+ CD      1      1   1.254s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4fhFxvK jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4cYuVFu jovyan   executorl+ CD      1      1   1.151s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4ZP52K9 jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+
+</pre></div>
+</div>
+</div>
+</div>
+<section id="cache">
+<h3>Cache<a class="headerlink" href="#cache" title="Link to this heading">#</a></h3>
+<p>The internal cache of the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> can be defined using the <code class="docutils literal notranslate"><span class="pre">cache_directory</span></code> parameter. To analyse the content of the current cache directory, we can use the <code class="docutils literal notranslate"><span class="pre">get_cache_data()</span></code> function:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cache_data</span>
+
+<span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">get_cache_data</span><span class="p">(</span><span class="n">cache_directory</span><span class="o">=</span><span class="s2">&quot;executorlib_cache&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>function</th>
+      <th>input_args</th>
+      <th>input_kwargs</th>
+      <th>output</th>
+      <th>resource_dict</th>
+      <th>runtime</th>
+      <th>queue_id</th>
+      <th>error_log_file</th>
+      <th>filename</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>&lt;built-in function sum&gt;</td>
+      <td>[[1, 1]]</td>
+      <td>{}</td>
+      <td>2</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001279</td>
+      <td>135459241984</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/sum5684c948e337...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>&lt;built-in function sum&gt;</td>
+      <td>[[3, 3]]</td>
+      <td>{}</td>
+      <td>6</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001323</td>
+      <td>139603214336</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/sumc17e02a6dc40...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>&lt;built-in function sum&gt;</td>
+      <td>[[4, 4]]</td>
+      <td>{}</td>
+      <td>8</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001545</td>
+      <td>141750697984</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/sumf3976430477e...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>&lt;built-in function sum&gt;</td>
+      <td>[[2, 2]]</td>
+      <td>{}</td>
+      <td>4</td>
+      <td>{'cores': 1, 'threads_per_core': 1, 'gpus_per_...</td>
+      <td>0.001467</td>
+      <td>137539616768</td>
+      <td>None</td>
+      <td>/home/jovyan/executorlib_cache/sum3d89b9dcf89b...</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
+</div>
+</section>
+<section id="submission-template">
+<h3>Submission Template<a class="headerlink" href="#submission-template" title="Link to this heading">#</a></h3>
+<p>While for flux it is commonly not necessary to specify specific job scheduler configurations, this is usually the case with the <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> as SLURM is configured differently on every HPC. Internally executorlib uses the Python Simple Queuing System <a class="reference external" href="https://pysqa.readthedocs.io/">pysqa</a> interface:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">submission_template</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">#!/bin/bash</span>
+<span class="s2"># flux: --job-name={{job_name}}</span>
+<span class="s2"># flux: --env=CORES={{cores}}</span>
+<span class="s2"># flux: --output=time.out</span>
+<span class="s2"># flux: --error=error.out</span>
+<span class="s2"># flux: --nslots={{cores}}</span>
+<span class="s2">{</span><span class="si">%- i</span><span class="s2">f run_time_max %}</span>
+<span class="s2"># flux: --time-limit={{run_time_max}}s</span>
+<span class="s2">{</span><span class="si">%- e</span><span class="s2">ndif %}</span>
+<span class="s2">{</span><span class="si">%- i</span><span class="s2">f dependency_list %}</span>
+<span class="s2">{</span><span class="si">%- f</span><span class="s2">or jobid in dependency_list %}</span>
+<span class="s2"># flux: --dependency=afterok:{{jobid}}</span>
+<span class="s2">{</span><span class="si">%- e</span><span class="s2">ndfor %}</span>
+<span class="s2">{</span><span class="si">%- e</span><span class="s2">ndif %}</span>
+
+<span class="s2">{{command}}</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
+
+<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;submission_template&quot;</span><span class="p">:</span> <span class="n">submission_template</span><span class="p">}))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[False, False, False, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<p>When the same function is submitted with the same parameters it is not computed again, even if the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code> is updated.</p>
+</section>
+<section id="mpi-parallel-functions">
+<h3>MPI parallel functions<a class="headerlink" href="#mpi-parallel-functions" title="Link to this heading">#</a></h3>
+<p>Besides the option to specify the submission script the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code> also defines the computing resources. Here I demonstrate this for the number of CPU cores to use with an MPI parallel Python function. Still the same also applies for the number of threads of GPUs, basically all the resources which can be specified in the job scheduler can be assigned to individual Python functions using the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code>. A detailed list of the parameters for the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code> is available in the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/trouble_shooting.html#resource-dictionary">documentation</a>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calc_mpi</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">mpi4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPI</span>
+
+    <span class="n">size</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+    <span class="n">rank</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">i</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">rank</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
+
+<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">calc_mpi</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[(3, 2, 0), (3, 2, 1)]
+</pre></div>
+</div>
+</div>
+</div>
+<p>The advantage of defining the computing resources on a per Python function level is that it is much easier to parallize your code as you only have to modify the functions which actually benefit from the parallel execution, while the rest of the code remains serial.</p>
+</section>
+</section>
+<section id="fluxjobexecutor">
+<h2>FluxJobExecutor<a class="headerlink" href="#fluxjobexecutor" title="Link to this heading">#</a></h2>
+<p>In contrast to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> and the <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> both communicate via Sockets, which provides a performance benefit:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
+
+<span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[False, False, False, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span><span class="nb">jobs</span><span class="w"> </span>-a
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZW jovyan   python     CD      1      1   0.167s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZV jovyan   python     CD      1      1   0.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDnbjpK jovyan   python     CD      1      1   0.199s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDp5j6f jovyan   python     CD      1      1   0.158s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒAA1PmGT jovyan   executorl+ CD      1      1   2.661s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4iy2NzT jovyan   executorl+ CD      1      1   1.254s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4fhFxvK jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4cYuVFu jovyan   executorl+ CD      1      1   1.151s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4ZP52K9 jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+
+</pre></div>
+</div>
+</div>
+</div>
+<section id="block-allocation">
+<h3>Block Allocation<a class="headerlink" href="#block-allocation" title="Link to this heading">#</a></h3>
+<p>To further improve the performance of the evaluation of the Python functions, we can activate <code class="docutils literal notranslate"><span class="pre">block_allocation=True</span></code>. In this mode a single Python process is reused to evaluate multiple Python functions, breaking the previous mapping of one Python function per Python process.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
+
+<span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">block_allocation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[False, False, False, False]
+[2, 4, 6, 8]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span><span class="nb">jobs</span><span class="w"> </span>-a
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒELUpJVV jovyan   python     CD      1      1   0.175s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZW jovyan   python     CD      1      1   0.167s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCGPpUZV jovyan   python     CD      1      1   0.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDnbjpK jovyan   python     CD      1      1   0.199s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒCDp5j6f jovyan   python     CD      1      1   0.158s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒAA1PmGT jovyan   executorl+ CD      1      1   2.661s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4iy2NzT jovyan   executorl+ CD      1      1   1.254s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4fhFxvK jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4cYuVFu jovyan   executorl+ CD      1      1   1.151s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ4ZP52K9 jovyan   executorl+ CD      1      1   1.162s jupyter-janj-lanl-executorlib-tutorial-l9gs95k0</span>
+
+</pre></div>
+</div>
+</div>
+</div>
+<p>This functionality can be very helpful when a large number of similar computations are executed one after another.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sum_df</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+
+<span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">block_allocation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">sum_df</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>   a  b  c
+0  1  4  5
+1  2  5  7
+2  3  6  9
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="initialization-function">
+<h3>Initialization function<a class="headerlink" href="#initialization-function" title="Link to this heading">#</a></h3>
+<p>Beyond just reusing the same Python process for multiple Python functions, we can also pre-load a dataset in this Python process and then access this pre-loaded dataset in multiple Python functions.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;large.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">init_file_handle</span><span class="p">():</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">open_large_file</span><span class="p">():</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;large.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;file_handle&quot;</span><span class="p">:</span> <span class="n">open_large_file</span><span class="p">()}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_next_n_lines</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="n">file_handle</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">)]</span>  
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">block_allocation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">init_function</span><span class="o">=</span><span class="n">init_file_handle</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">f1</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">read_next_n_lines</span><span class="p">)</span>
+    <span class="n">f2</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">read_next_n_lines</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f1</span><span class="o">.</span><span class="n">result</span><span class="p">(),</span> <span class="n">f2</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;0&#39;, &#39;1&#39;, &#39;2&#39;, &#39;3&#39;, &#39;4&#39;] [&#39;5&#39;, &#39;6&#39;, &#39;7&#39;, &#39;8&#39;, &#39;9&#39;, &#39;10&#39;, &#39;11&#39;, &#39;12&#39;, &#39;13&#39;, &#39;14&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "flux"
+        },
+        kernelOptions: {
+            name: "flux",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'flux'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="1_flux.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Flux</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-standard-library">Python Standard Library</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#executor-types">Executor Types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#singlenodeexecutor">SingleNodeExecutor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cache">Cache</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#submission-template">Submission Template</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi-parallel-functions">MPI parallel functions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block Allocation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initialization-function">Initialization function</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jan Janssen
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2023.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
