@@ -1,0 +1,13 @@
+title: LANL executorlib Tutorial
+author: Jan Janssen
+
+execute:
+  execute_notebooks           : off
+
+repository:
+    url                       : https://github.com/pyiron-workshop/lanl-executorlib-tutorial
+    path_to_book              : ""
+
+launch_buttons:
+  notebook_interface          : jupyterlab
+  binderhub_url               : https://mybinder.org

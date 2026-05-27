@@ -1,0 +1,5 @@
+format: jb-book
+root: README
+chapters:
+- file: 0_slurm.ipynb
+- file: 1_flux.ipynb
