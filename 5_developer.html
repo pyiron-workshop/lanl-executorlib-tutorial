@@ -365,10 +365,28 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="developer">
 <h1>Developer<a class="headerlink" href="#developer" title="Link to this heading">#</a></h1>
-<p>This final notebook is designed to give you some impression how executorlib works internally and how to debug executorlib.</p>
+<p>This final notebook is designed to give you insight into <strong>how <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> works internally</strong> and how to <strong>debug workflows</strong> when things go wrong. The topics covered here are relevant when:</p>
+<ul class="simple">
+<li><p>Functions transfer large amounts of data between the main process and worker processes</p></li>
+<li><p>A few calls in a large parameter sweep fail and you need to diagnose which ones and why</p></li>
+<li><p>You want to test file-based (<code class="docutils literal notranslate"><span class="pre">ClusterExecutor</span></code>) behaviour locally without a scheduler</p></li>
+<li><p>You need to interface <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> with external executables that are not Python programs</p></li>
+</ul>
+<p><strong>Learning objectives:</strong> After this notebook you will be able to:</p>
+<ul class="simple">
+<li><p>Measure serialisation overhead with <code class="docutils literal notranslate"><span class="pre">log_obj_size</span></code></p></li>
+<li><p>Capture per-function errors in log files without crashing the workflow</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">TestClusterExecutor</span></code> to debug cluster-executor behaviour locally</p></li>
+<li><p>Wrap external command-line executables in <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> functions using <code class="docutils literal notranslate"><span class="pre">subprocess</span></code></p></li>
+<li><p>Build an interactive interface to a long-running external process using block allocation and <code class="docutils literal notranslate"><span class="pre">init_function</span></code></p></li>
+</ul>
 <section id="data-transfer">
 <h2>Data Transfer<a class="headerlink" href="#data-transfer" title="Link to this heading">#</a></h2>
-<p>Transferring a large amount of data between two processes requires additional resources so it is helpful to measure the data transferred between the frontend and backend process. This is achieved by setting the <code class="docutils literal notranslate"><span class="pre">log_obj_size</span></code> parameter to <code class="docutils literal notranslate"><span class="pre">True</span></code>:</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> communicates between the main Python process and worker processes by <strong>serialising</strong> (pickling) function arguments and return values. This serialisation happens every time a function is submitted and every time a result is retrieved. For most scientific data types (numpy arrays, Python scalars, ASE Atoms objects) the overhead is negligible.</p>
+<p>However, if a function takes or returns a very large object — a multi-gigabyte array, a large graph, or a complex nested data structure — the serialisation time can dominate the total runtime. Setting <code class="docutils literal notranslate"><span class="pre">log_obj_size=True</span></code> on any executor prints the <strong>size in bytes</strong> of each serialised object to the console, helping you identify unexpected data transfer bottlenecks early.</p>
+<blockquote>
+<div><p><strong>Tip:</strong> If a function argument is large and does not change between calls (e.g. a &gt; pre-computed dataset), consider passing it through <code class="docutils literal notranslate"><span class="pre">init_function</span></code> instead of as a regular &gt; argument. It is serialised once at worker startup rather than once per call.</p>
+</div></blockquote>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SingleNodeExecutor</span>
@@ -394,7 +412,13 @@ Received dictionary of size: 58
 </section>
 <section id="write-log-files">
 <h2>Write Log Files<a class="headerlink" href="#write-log-files" title="Link to this heading">#</a></h2>
-<p>Libraries like executorlib are commonly used to sample a large parameter space, in this case it is possible that out of a large number of parameters one combination throws an error. This error can be logged in a file which also contains the function and input parameters using the <code class="docutils literal notranslate"><span class="pre">&quot;error_log_file&quot;</span></code> parameter in the <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code>. This allows to change the log file on a per-function bases.</p>
+<p>When sampling a large parameter space with many function calls it is common for a small fraction of parameter combinations to cause errors — a numerical instability at the boundary of the parameter range, a missing input file for a specific structure, or a corner case in the physics. Allowing one failure to crash the entire workflow wastes the results already computed.</p>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">&quot;error_log_file&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> captures any exception raised by the function — along with the <strong>function name</strong> and <strong>input parameters</strong> — in a text file. This means:</p>
+<ol class="arabic simple">
+<li><p>The workflow continues processing remaining parameter combinations</p></li>
+<li><p>Failed calls can be re-run later after debugging</p></li>
+</ol>
+<p>The <code class="docutils literal notranslate"><span class="pre">&quot;error_log_file&quot;</span></code> key can be set per-function in <code class="docutils literal notranslate"><span class="pre">submit()</span></code> or globally as a default <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> in the executor constructor. The example below sets it globally via the <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> argument to <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SingleNodeExecutor</span>
@@ -413,7 +437,7 @@ Received dictionary of size: 58
 </div>
 </div>
 </div>
-<p>A try and except statement is added to prevent the jupyter notebook from crashing:</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">try</span></code> / <code class="docutils literal notranslate"><span class="pre">except</span></code> block is used here to prevent the notebook cell from stopping with an unhandled exception. In a real workflow you would not need this — the error is captured in the log file and the <code class="docutils literal notranslate"><span class="pre">Future</span></code> object for the failed call will raise the exception only when <code class="docutils literal notranslate"><span class="pre">.result()</span></code> is called on that specific future. All other futures remain unaffected.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">SingleNodeExecutor</span><span class="p">(</span><span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;error_log_file&quot;</span><span class="p">:</span> <span class="s2">&quot;error.out&quot;</span><span class="p">})</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
@@ -429,7 +453,12 @@ Received dictionary of size: 58
 </div>
 </div>
 </div>
-<p>The content of the log file is a basic text file, so it can be read with any kind of file utility. The important part is that the log file contains not only the error message but in addition also the function name and the input parameters in the case kwargs: <code class="docutils literal notranslate"><span class="pre">{'i':</span> <span class="pre">2,</span> <span class="pre">'j':</span> <span class="pre">2}</span></code> which helps for future debugging of the sampling function.</p>
+<p>The log file is a plain text file that can be opened with any editor or read with Python’s <code class="docutils literal notranslate"><span class="pre">open()</span></code>. The critical feature is that the log contains not just the traceback but also:</p>
+<ul class="simple">
+<li><p>The <strong>function name</strong> that raised the exception</p></li>
+<li><p>The <strong>input parameters</strong> (<code class="docutils literal notranslate"><span class="pre">kwargs:</span> <span class="pre">{'i':</span> <span class="pre">2,</span> <span class="pre">'j':</span> <span class="pre">2}</span></code>) that caused the failure</p></li>
+</ul>
+<p>This allows you to reproduce the exact failing call in an interactive session and debug it without having to re-run the entire parameter sweep.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;error.out&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -478,7 +507,13 @@ Received dictionary of size: 58
 </section>
 <section id="testclusterexecutor">
 <h2>TestClusterExecutor<a class="headerlink" href="#testclusterexecutor" title="Link to this heading">#</a></h2>
-<p>While the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> internally behaves very similar to the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> and <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> behave very different as they use the file system to exchange information rather than socket-based communication. This can lead to complications when it comes to debugging. To address this challenge executorlib provides the <code class="docutils literal notranslate"><span class="pre">TestClusterExecutor</span></code> which can be executed on a local workstation just like the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> but in the background it uses the same file based communication like the <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> and the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> mimics the behaviour of <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> / <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> (socket-based communication) but runs locally. However, the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> use a fundamentally different communication mechanism: they write serialised function arguments to HDF5 files on disk and read results back from those files. This file-based round-trip introduces potential failure modes that socket communication does not have:</p>
+<ul class="simple">
+<li><p>Permissions issues with the cache directory</p></li>
+<li><p>Version incompatibilities in the HDF5 format between executorlib releases</p></li>
+<li><p>Race conditions when multiple workers access the same cache simultaneously</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">TestClusterExecutor</span></code> replicates the file-based communication of <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> / <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> but runs entirely locally, allowing you to reproduce and debug cluster-executor-specific issues without an HPC system. It accepts the same parameters as the cluster executors.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">TestClusterExecutor</span>
@@ -498,10 +533,19 @@ Received dictionary of size: 58
 </section>
 <section id="external-executables">
 <h2>External Executables<a class="headerlink" href="#external-executables" title="Link to this heading">#</a></h2>
-<p>On extension beyond the submission of Python functions is the communication with an external executable. This could be any kind of program written in any programming language which does not provide Python bindings so it cannot be represented in Python functions.</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> is not limited to Python functions — it can also orchestrate <strong>arbitrary command-line executables</strong> written in any language (Fortran, C++, Julia, bash, etc.). This is important at LANL because many simulation codes are legacy Fortran programs that do not have Python bindings.</p>
+<p>Two usage patterns are supported:</p>
+<ol class="arabic simple">
+<li><p><strong>Subprocess</strong> — the executable is called once per function invocation. Suitable for programs that read input from files and write output to files (the Quantum ESPRESSO workflow in the previous notebook uses this pattern).</p></li>
+<li><p><strong>Interactive</strong> — the executable is started once and remains running; Python communicates with it over <code class="docutils literal notranslate"><span class="pre">stdin</span></code>/<code class="docutils literal notranslate"><span class="pre">stdout</span></code> for multiple interactions. Suitable for programs with a request-response interface (REPL, interactive simulation codes, etc.).</p></li>
+</ol>
 <section id="subprocess">
 <h3>Subprocess<a class="headerlink" href="#subprocess" title="Link to this heading">#</a></h3>
-<p>If the external executable is called only once, then the call to the external executable can be represented in a Python function with the <a class="reference external" href="https://docs.python.org/3/library/subprocess.html">subprocess</a> module of the Python standard library. In the example below the shell command <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">test</span></code> is submitted to the <code class="docutils literal notranslate"><span class="pre">execute_shell_command()</span></code> function, which itself is submitted to the <code class="docutils literal notranslate"><span class="pre">Executor</span></code> class.</p>
+<p>If the external executable is invoked once per task, wrap it in a Python function using the <a class="reference external" href="https://docs.python.org/3/library/subprocess.html"><code class="docutils literal notranslate"><span class="pre">subprocess</span></code></a> module from the standard library. This function is then submitted to <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> like any other Python function — <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> handles the parallelism, and the function handles the executable invocation.</p>
+<p>In the example below the shell command <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">test</span></code> is submitted via <code class="docutils literal notranslate"><span class="pre">execute_shell_command()</span></code> to a <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code>. In a real workflow you would replace <code class="docutils literal notranslate"><span class="pre">[&quot;echo&quot;,</span> <span class="pre">&quot;test&quot;]</span></code> with the path and arguments of your simulation executable, e.g. <code class="docutils literal notranslate"><span class="pre">[&quot;/path/to/pw.x&quot;,</span> <span class="pre">&quot;-in&quot;,</span> <span class="pre">&quot;input.pwi&quot;]</span></code>.</p>
+<blockquote>
+<div><p><strong>Security note:</strong> Set <code class="docutils literal notranslate"><span class="pre">shell=False</span></code> (the default) whenever possible to avoid shell &gt; injection vulnerabilities. Only set <code class="docutils literal notranslate"><span class="pre">shell=True</span></code> if you need shell features like pipes or &gt; glob expansion, and never construct the command string from untrusted user input.</p>
+</div></blockquote>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SingleNodeExecutor</span>
@@ -545,8 +589,14 @@ Received dictionary of size: 58
 </section>
 <section id="interactive">
 <h3>Interactive<a class="headerlink" href="#interactive" title="Link to this heading">#</a></h3>
-<p>The more complex case is the interaction with an external executable during the run time of the executable. This can be implemented with executorlib using the block allocation <code class="docutils literal notranslate"><span class="pre">block_allocation=True</span></code> feature. The external executable is started as part of the initialization function <code class="docutils literal notranslate"><span class="pre">init_function</span></code> and then the indivdual functions submitted to the <code class="docutils literal notranslate"><span class="pre">Executor</span></code> class interact with the process which is connected to the external executable.</p>
-<p>Starting with the definition of the executable, in this example it is a simple script which just increases a counter. The script is written in the file <code class="docutils literal notranslate"><span class="pre">count.py</span></code> so it behaves like an external executable, which could also use any other progamming language.</p>
+<p>The more complex case is maintaining a <strong>persistent connection</strong> to an external executable — sending it inputs and reading back outputs multiple times without restarting it. This pattern is needed when:</p>
+<ul class="simple">
+<li><p>Program startup is expensive (loading large data files, JIT compilation)</p></li>
+<li><p>The program maintains internal state between calls</p></li>
+<li><p>The program implements a conversational protocol (REPL, interactive solver)</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code>’s <code class="docutils literal notranslate"><span class="pre">block_allocation</span></code> feature is the key enabler: with <code class="docutils literal notranslate"><span class="pre">block_allocation=True</span></code> the worker process persists between function calls, and the <code class="docutils literal notranslate"><span class="pre">init_function</span></code> starts the external executable once when the worker initialises.</p>
+<p>The example here uses a simple Python script <code class="docutils literal notranslate"><span class="pre">count.py</span></code> as a stand-in for any external executable — in practice this could be a Fortran REPL, a compiled solver, or any program that reads commands from <code class="docutils literal notranslate"><span class="pre">stdin</span></code> and writes results to <code class="docutils literal notranslate"><span class="pre">stdout</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">count_script</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -571,7 +621,8 @@ Received dictionary of size: 58
 </div>
 </div>
 </div>
-<p>The connection to the external executable is established in the initialization function <code class="docutils literal notranslate"><span class="pre">init_function</span></code> of the <code class="docutils literal notranslate"><span class="pre">Executor</span></code> class. By using the <a class="reference external" href="https://docs.python.org/3/library/subprocess.html">subprocess</a> module from the standard library two process pipes are created to communicate with the external executable. One process pipe is connected to the standard input <code class="docutils literal notranslate"><span class="pre">stdin</span></code> and the other is connected to the standard output <code class="docutils literal notranslate"><span class="pre">stdout</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">init_function</span></code> starts the external executable as a subprocess and returns a dictionary whose keys become keyword arguments to every subsequently submitted function. Here the subprocess is started with <code class="docutils literal notranslate"><span class="pre">stdin=PIPE</span></code> and <code class="docutils literal notranslate"><span class="pre">stdout=PIPE</span></code> so that Python can write to its standard input and read from its standard output.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">init_function</span></code> runs <strong>once when the worker process starts</strong> (not once per function call), so the external executable’s startup overhead is amortised across all function calls in the block allocation.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">init_process</span><span class="p">():</span>
@@ -590,7 +641,13 @@ Received dictionary of size: 58
 </div>
 </div>
 </div>
-<p>The interaction function handles the data conversion from the Python datatypes to the strings which can be communicated to the external executable. It is important to always add a new line <code class="docutils literal notranslate"><span class="pre">\n</span></code> to each command send via the standard input <code class="docutils literal notranslate"><span class="pre">stdin</span></code> to the external executable and afterwards flush the pipe by calling <code class="docutils literal notranslate"><span class="pre">flush()</span></code> on the standard input pipe <code class="docutils literal notranslate"><span class="pre">stdin</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">interact()</span></code> function is the core of the communication protocol. It:</p>
+<ol class="arabic simple">
+<li><p>Writes a command string to the external executable’s <code class="docutils literal notranslate"><span class="pre">stdin</span></code>, followed by a newline <code class="docutils literal notranslate"><span class="pre">\n</span></code></p></li>
+<li><p>Calls <code class="docutils literal notranslate"><span class="pre">flush()</span></code> to ensure the data is sent immediately (buffering can cause deadlocks if the flush is omitted)</p></li>
+<li><p>Reads the response back from <code class="docutils literal notranslate"><span class="pre">stdout</span></code> either for a fixed number of lines or until a sentinel pattern is matched</p></li>
+</ol>
+<p>The exact implementation depends on the protocol your executable uses. Always end commands with <code class="docutils literal notranslate"><span class="pre">\n</span></code> and flush immediately.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">interact</span><span class="p">(</span><span class="n">shell_input</span><span class="p">,</span> <span class="n">process</span><span class="p">,</span> <span class="n">lines_to_read</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stop_read_pattern</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -611,7 +668,7 @@ Received dictionary of size: 58
 </div>
 </div>
 </div>
-<p>Finally, to close the process after the external executable is no longer required it is recommended to define a shutdown function, which communicates to the external executable that it should shutdown. In the case of the <code class="docutils literal notranslate"><span class="pre">count.py</span></code> script defined above this is achieved by sending the keyword <code class="docutils literal notranslate"><span class="pre">shutdown</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">shutdown()</span></code> function sends the termination command to the external executable before the worker process exits. Without a graceful shutdown the subprocess might be left as a zombie process. The specific termination signal depends on the executable; here <code class="docutils literal notranslate"><span class="pre">&quot;shutdown\n&quot;</span></code> is the sentinel that <code class="docutils literal notranslate"><span class="pre">count.py</span></code> recognises.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="n">process</span><span class="p">):</span>
@@ -621,7 +678,8 @@ Received dictionary of size: 58
 </div>
 </div>
 </div>
-<p>With these utility functions is to possible to communicate with any kind of external executable. Still for the specific implementation of the external executable it might be necessary to adjust the corresponding Python functions. Therefore this functionality is currently limited to developers and not considered a general feature of executorlib.</p>
+<p>With these three utility functions (<code class="docutils literal notranslate"><span class="pre">init_process</span></code>, <code class="docutils literal notranslate"><span class="pre">interact</span></code>, <code class="docutils literal notranslate"><span class="pre">shutdown</span></code>) <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> can communicate with any external executable that uses a <code class="docutils literal notranslate"><span class="pre">stdin</span></code>/<code class="docutils literal notranslate"><span class="pre">stdout</span></code> protocol. The <code class="docutils literal notranslate"><span class="pre">shutdown_function</span></code> parameter ensures clean termination.</p>
+<p>This pattern is currently considered a <strong>developer feature</strong> — it requires knowledge of the external executable’s communication protocol and careful handling of buffering, encoding, and error conditions. For production use it is recommended to wrap the executable in a more robust Python adapter class. The <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> / <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code>-based pattern from the Application notebook (calling the executable once per function via <code class="docutils literal notranslate"><span class="pre">subprocess</span></code>) is simpler and sufficient for most simulation codes.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">SingleNodeExecutor</span><span class="p">(</span>

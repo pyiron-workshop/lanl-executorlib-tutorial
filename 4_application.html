@@ -60,6 +60,8 @@
     <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '4_application';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -346,13 +348,17 @@
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gpaw">GPAW</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generating-strained-structures">Generating strained structures</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fitting-the-equation-of-state">Fitting the equation of state</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quantum-espresso">Quantum Espresso</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">FluxClusterExecutor</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">FluxJobExecutor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quantum-espresso">Quantum ESPRESSO</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pseudopotentials">Pseudopotentials</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Generating strained structures</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">FluxClusterExecutor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">FluxJobExecutor</a></li>
 </ul>
 </li>
 </ul>
@@ -368,9 +374,29 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="application">
 <h1>Application<a class="headerlink" href="#application" title="Link to this heading">#</a></h1>
+<p>This notebook demonstrates <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> in the context of real scientific computing workflows at LANL: <strong>density-functional theory (DFT) calculations</strong> for materials science. Two popular DFT codes are used:</p>
+<ol class="arabic simple">
+<li><p><strong>GPAW</strong> — a Python-based DFT code with native <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> parallelisation</p></li>
+<li><p><strong>Quantum ESPRESSO</strong> — a Fortran-based DFT code parallelised with its own MPI, invoked as an external executable</p></li>
+</ol>
+<p>In both cases the scientific goal is to compute an <strong>equation-of-state (EOS)</strong> for aluminium: the total energy as a function of unit-cell volume. From the EOS curve the <strong>bulk modulus</strong> (resistance to uniform compression) is extracted by fitting a third-order polynomial and taking the second derivative with respect to volume.</p>
+<p>The workflow is the same for both codes:</p>
+<ol class="arabic simple">
+<li><p>Generate a set of strained crystal structures (volumes ranging ±5% around equilibrium)</p></li>
+<li><p>Submit each structure as a parallel DFT calculation</p></li>
+<li><p>Collect energies and fit the EOS curve</p></li>
+<li><p>Plot the result</p></li>
+</ol>
+<p><strong>Why <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> is needed here:</strong>
+Each DFT calculation internally uses MPI for parallelism. Orchestrating many such calculations simultaneously — a <em>hierarchical</em> workflow — is exactly the use case <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> is designed for. The alternative (writing the entire workflow in MPI or managing many <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> scripts by hand) is far more complex.</p>
 <section id="gpaw">
 <h2>GPAW<a class="headerlink" href="#gpaw" title="Link to this heading">#</a></h2>
-<p>The <a class="reference external" href="https://gpaw.readthedocs.io/index.html">gpaw</a> density-functional theory (DFT) simulation code provides a Python interface supporting the <a class="reference external" href="https://mpi4py.readthedocs.io">message passing interface (MPI) for Python - mpi4py</a> for parallelization. So <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> is used to orchestrate multiple <a class="reference external" href="https://gpaw.readthedocs.io/index.html">gpaw</a> simulation each using multiple CPU cores for parallelization. These kind of hierarchical workflows are one of the core strength of <code class="docutils literal notranslate"><span class="pre">executorlib</span></code>. While the same could be achieved by writing the whole simulation workflow using <a class="reference external" href="https://mpi4py.readthedocs.io">mpi4py</a> this would drastically increase the complexity. With <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> the user can quickly up-scale their simulation workflow without the need to address the parallel execution explicitly, rather the parallelization is introduced on a per-function level, by submitting the functions to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> or <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>.</p>
+<p><a class="reference external" href="https://gpaw.readthedocs.io/index.html">GPAW</a> is a density-functional theory (DFT) code that implements the projector-augmented wave (PAW) method. It provides a Python interface and uses <a class="reference external" href="https://mpi4py.readthedocs.io">mpi4py</a> for parallelisation, making it easy to call from Python workflows.</p>
+<p><strong>What is DFT?</strong>
+Density-functional theory is the workhorse of computational materials science. It solves a quantum-mechanical approximation to the Schrödinger equation to predict the electronic structure and total energy of a system of atoms. The total energy as a function of atomic configuration is used to compute mechanical properties (bulk modulus, elastic constants), thermodynamic quantities, and more.</p>
+<p><strong>What is the bulk modulus?</strong>
+The bulk modulus <span class="math notranslate nohighlight">\(B_0\)</span> measures how resistant a material is to uniform compression. It is defined as <span class="math notranslate nohighlight">\(B_0 = -V\, dP/dV\)</span>, equivalently <span class="math notranslate nohighlight">\(B_0 = V\, d^2E/dV^2\)</span> at the equilibrium volume <span class="math notranslate nohighlight">\(V_0\)</span>. A larger bulk modulus means a stiffer material. For aluminium the experimental value is approximately 76 GPa.</p>
+<p>The <a class="reference external" href="https://atomistics.readthedocs.io">atomistics</a> library provides helper functions to generate the strained structures and fit the EOS. The imports below pull in everything needed for the GPAW workflow:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
@@ -393,7 +419,7 @@
 </div>
 </div>
 </div>
-<p>The only function which is executed using <a class="reference external" href="https://mpi4py.readthedocs.io">mpi4py</a> is the <code class="docutils literal notranslate"><span class="pre">evaluate_with_gpaw()</span></code> function:</p>
+<p>The only function executed in parallel with MPI is <code class="docutils literal notranslate"><span class="pre">evaluate_with_gpaw()</span></code>. All other workflow steps (structure generation, EOS fitting, plotting) run serially in the main Python process. This is the key architectural pattern enabled by <code class="docutils literal notranslate"><span class="pre">executorlib</span></code>: <strong>you write normal, serial Python for the workflow logic and annotate only the compute-intensive functions with parallel resources</strong>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_with_gpaw</span><span class="p">(</span><span class="n">task_dict</span><span class="p">,</span> <span class="n">kpts</span><span class="p">,</span> <span class="n">encut</span><span class="p">):</span>
@@ -417,7 +443,10 @@
 </div>
 </div>
 </div>
-<p>As a first step of the workflow the equilibrium structure of four Aluminium atoms is strained by 5%.</p>
+<section id="generating-strained-structures">
+<h3>Generating strained structures<a class="headerlink" href="#generating-strained-structures" title="Link to this heading">#</a></h3>
+<p>The equilibrium FCC aluminium structure (lattice parameter <span class="math notranslate nohighlight">\(a = 4.03\)</span> Å, four atoms per unit cell) is <strong>strained</strong> by expanding and compressing the unit cell volume by up to 5% in <code class="docutils literal notranslate"><span class="pre">num_points=7</span></code> equal steps. This produces seven structures at different volumes, which will each be sent to a separate DFT calculation.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">get_tasks_for_energy_volume_curve()</span></code> function returns a dictionary <code class="docutils literal notranslate"><span class="pre">task_dict</span></code> with a <code class="docutils literal notranslate"><span class="pre">&quot;calc_energy&quot;</span></code> key mapping structure identifiers to ASE <code class="docutils literal notranslate"><span class="pre">Atoms</span></code> objects.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">task_dict</span> <span class="o">=</span> <span class="n">get_tasks_for_energy_volume_curve</span><span class="p">(</span>
@@ -430,7 +459,7 @@
 </div>
 </div>
 </div>
-<p>The resulting dictionary of structures <code class="docutils literal notranslate"><span class="pre">task_dict</span></code> is transformed to simplify the parallel execution:</p>
+<p>The dictionary is reformatted so that each entry has the form <code class="docutils literal notranslate"><span class="pre">{structure_id:</span> <span class="pre">{&quot;calc_energy&quot;:</span> <span class="pre">atoms_object}}</span></code>. This matches the input signature expected by <code class="docutils literal notranslate"><span class="pre">evaluate_with_gpaw()</span></code>, which receives a <code class="docutils literal notranslate"><span class="pre">task_dict</span></code> argument containing the structure to evaluate.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">task_loop_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;calc_energy&quot;</span><span class="p">:</span> <span class="n">v</span><span class="p">}</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">task_dict</span><span class="p">[</span><span class="s2">&quot;calc_energy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
@@ -438,7 +467,7 @@
 </div>
 </div>
 </div>
-<p>The status of the flux cluster is validated using the <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">resource</span> <span class="pre">list</span></code> command and the <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code> command, just to highlight flux was initialized correctly and has access to the available resources.</p>
+<p>Before submitting calculations it is good practice to confirm that the Flux instance is healthy and that the expected compute resources are available. A missing Flux broker or an allocation with zero free cores will cause submitted jobs to hang indefinitely.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span>resource<span class="w"> </span>list
@@ -447,7 +476,7 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>     STATE NNODES NCORES NGPUS NODELIST
-      free      1     16     0 jupyter-janj-lanl-executorlib-tutorial-9ce2an8u
+      free      1     16     0 jupyter-janj-lanl-executorlib-tutorial-st9yc3b4
  allocated      0      0     0 
       down      0      0     0 
 </pre></div>
@@ -466,9 +495,11 @@
 </div>
 </div>
 </div>
+</section>
 <section id="fluxclusterexecutor">
 <h3>FluxClusterExecutor<a class="headerlink" href="#fluxclusterexecutor" title="Link to this heading">#</a></h3>
-<p>The <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/2-hpc-cluster.html#flux">FluxClusterExecutor</a> is used in this demonstration primarily because flux can be installed on any workstation for testing. The <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/2-hpc-cluster.html#slurm">SlurmClusterExecutor</a> could be used analogously.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> is used here primarily because Flux can be installed on any workstation or test environment without a production HPC cluster. On LANL systems you would typically use the <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> with an appropriate submission template for the target partition. The API and workflow logic are identical.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">resource_dict={&quot;cores&quot;:</span> <span class="pre">2}</span></code> argument tells <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> to allocate 2 MPI tasks to each GPAW calculation. GPAW’s internal MPI parallelism will use both cores. Adjust this number based on the system size and available cores.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
@@ -476,11 +507,11 @@
 </div>
 </div>
 </div>
-<p>The for each strained structure a calculation task is submitted to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>. After the successful submission the current status of the flux queue is printed using <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code>. Finally, the results are collected by gathering the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#future-objects">concurrent.futures.Future</a> objects.</p>
+<p>For each strained structure a calculation is submitted to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> using <code class="docutils literal notranslate"><span class="pre">exe.submit()</span></code>. The call returns a <code class="docutils literal notranslate"><span class="pre">Future</span></code> immediately; GPAW starts running in the background. All seven calculations are submitted before any result is collected, so they can run concurrently (subject to available cores). After submission, <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code> is queried to show the queue state. Finally, <code class="docutils literal notranslate"><span class="pre">{k:</span> <span class="pre">v.result()</span> <span class="pre">for</span> <span class="pre">k,</span> <span class="pre">v</span> <span class="pre">in</span> <span class="pre">future_dict.items()}</span></code> blocks until all futures are resolved and assembles the energy dictionary.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">future_dict</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">task_loop_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">future_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
             <span class="n">evaluate_with_gpaw</span><span class="p">,</span> 
@@ -492,7 +523,7 @@
     <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">pprint</span><span class="o">.</span><span class="n">pp</span><span class="p">(</span><span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;flux&quot;</span><span class="p">,</span> <span class="s2">&quot;jobs&quot;</span><span class="p">,</span> <span class="s2">&quot;-a&quot;</span><span class="p">],</span> <span class="n">universal_newlines</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
     <span class="n">result_dict</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">k</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">future_dict</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
     <span class="p">}</span>
     <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -502,47 +533,57 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  R      1      1   0.123s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  R      1      1   0.255s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  R      1      1   0.380s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  R      1      1   0.507s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  R      1      1   0.629s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  R      1      1   0.749s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  R      1      1   0.874s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+  R      1      1   0.102s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+  R      1      1   0.227s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+  R      1      1   0.356s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+  R      1      1   0.482s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+  R      1      1   0.605s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+  R      1      1   0.730s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+  R      1      1   0.851s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [00:03&lt;00:00,  2.02it/s]
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [00:04&lt;00:00,  1.71it/s]
 </pre></div>
 </div>
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
 </div>
 </div>
-<p>The resulting energies for the different volumes are fitted using a 3rd order polynomial to derive the bulk modulus as second derivative multiplied by the equilibrium volume.</p>
+</section>
+<section id="fitting-the-equation-of-state">
+<h3>Fitting the equation of state<a class="headerlink" href="#fitting-the-equation-of-state" title="Link to this heading">#</a></h3>
+<p>The seven (volume, energy) pairs are fitted with a third-order Birch–Murnaghan polynomial using <code class="docutils literal notranslate"><span class="pre">analyse_results_for_energy_volume_curve()</span></code>. The fit yields:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(V_0\)</span>: equilibrium volume</p></li>
+<li><p><span class="math notranslate nohighlight">\(E_0\)</span>: equilibrium energy</p></li>
+<li><p><span class="math notranslate nohighlight">\(B_0\)</span>: bulk modulus (in GPa)</p></li>
+<li><p><span class="math notranslate nohighlight">\(B'_0\)</span>: pressure derivative of the bulk modulus</p></li>
+</ul>
+<p>These quantities characterise the mechanical response of the material and are standard benchmarks for DFT codes.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fit_dict</span> <span class="o">=</span> <span class="n">analyse_results_for_energy_volume_curve</span><span class="p">(</span>
@@ -555,7 +596,7 @@
 </div>
 </div>
 </div>
-<p>The final energy volume curve plot summarizes the results of this calculation.</p>
+<p>The energy–volume curve plot shows the parabolic relationship between total energy and unit-cell volume. The minimum of the curve corresponds to the equilibrium volume <span class="math notranslate nohighlight">\(V_0\)</span>. The curvature at the minimum is proportional to the bulk modulus <span class="math notranslate nohighlight">\(B_0\)</span>, shown in the legend. A steeper parabola (larger <span class="math notranslate nohighlight">\(B_0\)</span>) indicates a stiffer material.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">],</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;energy&quot;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$B_0$= </span><span class="si">%0.2f</span><span class="s2"> GPa&quot;</span> <span class="o">%</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;bulkmodul_eq&quot;</span><span class="p">])</span>
@@ -568,11 +609,11 @@
 <div class="cell_output docutils container">
 <div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
 &lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
-/tmp/ipykernel_2710/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
+/tmp/ipykernel_3044/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
   plt.xlabel(&quot;Volume [$\AA^3$]&quot;)
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f2fc9bee660&gt;
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f2d881e6660&gt;
 </pre></div>
 </div>
 <img alt="_images/73b2da68b7a2b2247116038b57201d706b8bcdaf9eaa01c732dfd9035294ced3.png" src="_images/73b2da68b7a2b2247116038b57201d706b8bcdaf9eaa01c732dfd9035294ced3.png" />
@@ -581,7 +622,8 @@
 </section>
 <section id="fluxjobexecutor">
 <h3>FluxJobExecutor<a class="headerlink" href="#fluxjobexecutor" title="Link to this heading">#</a></h3>
-<p>In analogy to the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/2-hpc-cluster.html#flux">FluxClusterExecutor</a> the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/3-hpc-job.html#flux">FluxJobExecutor</a> can be applied to distribute simulation within a given queuing system allocation. The calculation of the bulk modulus with <a class="reference external" href="https://gpaw.readthedocs.io">gpaw</a> is implemented in the same way.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> runs inside the current Flux allocation (socket-based communication) rather than submitting new Flux jobs from the login node. It is more efficient for this workflow because the GPAW calculations are short enough that the lower per-function overhead of socket communication outweighs the session-independence advantage of <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>.</p>
+<p>The workflow logic is identical — only the executor class name changes.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
@@ -589,11 +631,11 @@
 </div>
 </div>
 </div>
-<p>The for each strained structure a calculation task is submitted to the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>. After the successful submission the current status of the flux queue is printed using <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code>. Finally, the results are collected by gathering the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#future-objects">concurrent.futures.Future</a> objects.</p>
+<p>The submission loop and result collection are the same as with <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>. After all futures resolve, the energy dictionary is assembled and passed to the EOS fitting function.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">future_dict</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">task_loop_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">future_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
             <span class="n">evaluate_with_gpaw</span><span class="p">,</span> 
@@ -605,7 +647,7 @@
     <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">pprint</span><span class="o">.</span><span class="n">pp</span><span class="p">(</span><span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;flux&quot;</span><span class="p">,</span> <span class="s2">&quot;jobs&quot;</span><span class="p">,</span> <span class="s2">&quot;-a&quot;</span><span class="p">],</span> <span class="n">universal_newlines</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
     <span class="n">result_dict</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">k</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+        <span class="n">k</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">result</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">future_dict</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
     <span class="p">}</span>
     <span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -615,75 +657,75 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;    ƒFAY12Hm jovyan   python      R      2      1   0.947s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAV33j5 jovyan   python      R      2      1   0.947s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAS55AP jovyan   python      R      2      1   0.948s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4e jovyan   python      R      2      1   0.948s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4d jovyan   python      R      2      1   0.948s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4c jovyan   python      R      2      1   0.948s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4b jovyan   python      R      2      1   0.949s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;    ƒFgZzUQw jovyan   python      R      2      1   0.945s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgYWV8b jovyan   python      R      2      1   0.946s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgVYWZu jovyan   python      R      2      1   0.946s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeUA jovyan   python      R      2      1   0.947s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU9 jovyan   python      R      2      1   0.947s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU8 jovyan   python      R      2      1   0.947s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU7 jovyan   python      R      2      1   0.948s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [00:01&lt;00:00,  3.86it/s]
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [00:02&lt;00:00,  2.51it/s]
 </pre></div>
 </div>
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;    ƒFAY12Hm jovyan   python      R      2      1   3.863s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAV33j5 jovyan   python      R      2      1   3.863s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAS55AP jovyan   python      R      2      1   3.864s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4e jovyan   python      R      2      1   3.864s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4d jovyan   python      R      2      1   3.864s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4c jovyan   python      R      2      1   3.864s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4b jovyan   python      R      2      1   3.866s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;    ƒFgDEeUA jovyan   python     CD      2      1   3.950s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgYWV8b jovyan   python     CD      2      1   3.945s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU7 jovyan   python     CD      2      1   3.934s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU8 jovyan   python     CD      2      1   3.925s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU9 jovyan   python     CD      2      1   3.917s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgVYWZu jovyan   python     CD      2      1   3.899s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgZzUQw jovyan   python     CD      2      1   3.827s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
 </div>
 </div>
-<p>The resulting energies for the different volumes are fitted using a 3rd order polynomial to derive the bulk modulus as second derivative multiplied by the equilibrium volume.</p>
+<p>The EOS fitting and bulk modulus extraction are identical to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> case. Comparing the two results (which should agree within numerical noise) validates that both executor backends produce the same scientific output.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fit_dict</span> <span class="o">=</span> <span class="n">analyse_results_for_energy_volume_curve</span><span class="p">(</span>
@@ -696,7 +738,7 @@
 </div>
 </div>
 </div>
-<p>The final energy volume curve plot summarizes the results of this calculation.</p>
+<p>The energy–volume curve from the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> calculation should be visually identical to the previous plot. Any small differences in <span class="math notranslate nohighlight">\(B_0\)</span> reflect numerical differences in the DFT convergence rather than the choice of executor.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">],</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;energy&quot;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$B_0$= </span><span class="si">%0.2f</span><span class="s2"> GPa&quot;</span> <span class="o">%</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;bulkmodul_eq&quot;</span><span class="p">])</span>
@@ -709,11 +751,11 @@
 <div class="cell_output docutils container">
 <div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
 &lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
-/tmp/ipykernel_2710/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
+/tmp/ipykernel_3044/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
   plt.xlabel(&quot;Volume [$\AA^3$]&quot;)
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f2fc994da90&gt;
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f2d83955590&gt;
 </pre></div>
 </div>
 <img alt="_images/73b2da68b7a2b2247116038b57201d706b8bcdaf9eaa01c732dfd9035294ced3.png" src="_images/73b2da68b7a2b2247116038b57201d706b8bcdaf9eaa01c732dfd9035294ced3.png" />
@@ -722,8 +764,14 @@
 </section>
 </section>
 <section id="quantum-espresso">
-<h2>Quantum Espresso<a class="headerlink" href="#quantum-espresso" title="Link to this heading">#</a></h2>
-<p>The <a class="reference external" href="https://www.quantum-espresso.org">quantum espresso</a> density-functional theory (DFT) simulation code is written in Fortran and uses the message passing interface (MPI) for parallelization, without any Python bindings. So <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> is used to orchestrate multiple <a class="reference external" href="https://www.quantum-espresso.org">quantum espresso</a> simulation each using multiple CPU cores for parallelization. These kind of hierarchical workflows are one of the core strength of <code class="docutils literal notranslate"><span class="pre">executorlib</span></code>. It is important to emphasize that the same could not be achieved with other frameworks like <a class="reference external" href="https://mpi4py.readthedocs.io">mpi4py</a> as <a class="reference external" href="https://www.quantum-espresso.org">quantum espresso</a> does not support external MPI communicators without modifications to the Fortran source code. With <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> the user can quickly up-scale their simulation workflow without the need to address the parallel execution explicitly, rather the parallelization is introduced on a per-function level, by submitting the functions to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> or <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>.</p>
+<h2>Quantum ESPRESSO<a class="headerlink" href="#quantum-espresso" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.quantum-espresso.org">Quantum ESPRESSO</a> (QE) is a widely used DFT code written in <strong>Fortran</strong> and parallelised with MPI. Unlike GPAW it does not have a Python API — it is invoked as an external executable (<code class="docutils literal notranslate"><span class="pre">pw.x</span></code>) by reading input files from disk and writing output files to disk.</p>
+<p><strong>Why is this harder to parallelise?</strong>
+Because QE has no Python bindings, you cannot simply call it as a function. The standard approach is to write an input file, call <code class="docutils literal notranslate"><span class="pre">mpirun</span> <span class="pre">pw.x</span> <span class="pre">&lt;</span> <span class="pre">input.in</span> <span class="pre">&gt;</span> <span class="pre">output.out</span></code>, parse the output file, and repeat for each structure. Managing many such invocations by hand requires shell scripting or a workflow manager.</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> handles this cleanly: the <code class="docutils literal notranslate"><span class="pre">evaluate_with_quantum_espresso()</span></code> function wraps the external call and acts as a <em>Python adapter</em> for QE. <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> submits this function in parallel just like any other Python function — it does not matter that internally the function launches a Fortran executable.</p>
+<blockquote>
+<div><p><strong>Important distinction from GPAW:</strong> With GPAW the MPI parallelism is managed by <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> &gt; inside the Python process. With QE, <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> launches a separate <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span> <span class="pre">pw.x</span></code> &gt; command for each calculation. This is why <code class="docutils literal notranslate"><span class="pre">flux_executor_nesting=True</span></code> is needed for the &gt; <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> case: the function itself needs to spawn a Flux sub-job.</p>
+</div></blockquote>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
@@ -741,7 +789,11 @@
 </div>
 </div>
 </div>
-<p>The function which handles the parallel execution is the <code class="docutils literal notranslate"><span class="pre">evaluate_with_quantum_espresso()</span></code> function, internally it calls <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span> <span class="pre">pw.x</span></code> to execute the quantum espresso Fortran executable in parallel:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">evaluate_with_quantum_espresso()</span></code> function constructs the QE input, calls <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span> <span class="pre">pw.x</span></code> as a subprocess, and parses the output energy. The <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/">ASE</a> Espresso calculator handles input/output formatting. The key line internally is:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flux</span> <span class="n">run</span> <span class="o">-</span><span class="n">o</span> <span class="n">pmi</span><span class="o">=</span><span class="n">pmix</span> <span class="o">-</span><span class="n">n</span> <span class="p">{</span><span class="n">cores</span><span class="p">}</span> <span class="n">pw</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span><span class="ow">in</span> <span class="nb">input</span><span class="o">.</span><span class="n">pwi</span> <span class="o">&gt;</span> <span class="n">output</span><span class="o">.</span><span class="n">pwo</span>
+</pre></div>
+</div>
+<p>Each call to this function runs one QE DFT calculation on <code class="docutils literal notranslate"><span class="pre">cores</span></code> MPI tasks.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">evaluate_with_quantum_espresso</span><span class="p">(</span><span class="n">task_dict</span><span class="p">,</span> <span class="n">pseudopotentials</span><span class="p">,</span> <span class="n">kpts</span><span class="p">):</span>
@@ -765,7 +817,10 @@
 </div>
 </div>
 </div>
-<p>The pseudo potential is located in <code class="docutils literal notranslate"><span class="pre">~/espresso/pseudo</span></code>, here the absolute path to the pseudo potential is given as: <code class="docutils literal notranslate"><span class="pre">/home/jovyan/espresso/pseudo</span></code>.</p>
+<section id="pseudopotentials">
+<h3>Pseudopotentials<a class="headerlink" href="#pseudopotentials" title="Link to this heading">#</a></h3>
+<p>DFT calculations require <strong>pseudopotentials</strong> — pre-computed files that describe how each element’s core electrons are approximated. Pseudopotentials are element-specific and exchange-correlation-functional-specific. Here the PBE pseudopotential for aluminium (<code class="docutils literal notranslate"><span class="pre">Al.pbe-n-kjpaw_psl.1.0.0.UPF</span></code>) from the <a class="reference external" href="https://pseudopotentials.quantum-espresso.org">PSLibrary</a> is used. It must be present on disk at the path specified.</p>
+<p>The pseudopotential directory is set at <code class="docutils literal notranslate"><span class="pre">~/espresso/pseudo</span></code> (absolute path: <code class="docutils literal notranslate"><span class="pre">/home/jovyan/espresso/pseudo</span></code>).</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">pseudopotentials</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Al&quot;</span><span class="p">:</span> <span class="s2">&quot;Al.pbe-n-kjpaw_psl.1.0.0.UPF&quot;</span><span class="p">}</span>
@@ -773,7 +828,10 @@
 </div>
 </div>
 </div>
-<p>As a first step of the workflow the equilibrium structure of four Aluminium atoms is strained by 5%.</p>
+</section>
+<section id="id1">
+<h3>Generating strained structures<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
+<p>The structure generation for QE follows the same procedure as for GPAW. The only difference is the lattice parameter: for the conventional cubic cell with four atoms the equilibrium parameter is <span class="math notranslate nohighlight">\(a = 4.15\)</span> Å (the <code class="docutils literal notranslate"><span class="pre">cubic=True</span></code> flag requests the conventional four-atom cell rather than the primitive two-atom cell used by GPAW).</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">task_dict</span> <span class="o">=</span> <span class="n">get_tasks_for_energy_volume_curve</span><span class="p">(</span>
@@ -786,7 +844,7 @@
 </div>
 </div>
 </div>
-<p>The resulting dictionary of structures <code class="docutils literal notranslate"><span class="pre">task_dict</span></code> is transformed to simplify the parallel execution:</p>
+<p>The task dictionary is transformed to the same format as the GPAW case, mapping each structure identifier to a <code class="docutils literal notranslate"><span class="pre">{&quot;calc_energy&quot;:</span> <span class="pre">atoms}</span></code> dictionary for consumption by <code class="docutils literal notranslate"><span class="pre">evaluate_with_quantum_espresso()</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">task_loop_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;calc_energy&quot;</span><span class="p">:</span> <span class="n">v</span><span class="p">}</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">task_dict</span><span class="p">[</span><span class="s2">&quot;calc_energy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
@@ -794,7 +852,7 @@
 </div>
 </div>
 </div>
-<p>The status of the flux cluster is validated using the <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">resource</span> <span class="pre">list</span></code> command and the <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code> command, just to highlight flux was initialized correctly and has access to the available resources.</p>
+<p>Resource availability is confirmed before submitting QE calculations for the same reasons as in the GPAW section: to verify that the Flux instance is healthy and that cores are available for the parallel calculations.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span>resource<span class="w"> </span>list
@@ -803,7 +861,7 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>     STATE NNODES NCORES NGPUS NODELIST
-      free      1     16     0 jupyter-janj-lanl-executorlib-tutorial-9ce2an8u
+      free      1     16     0 jupyter-janj-lanl-executorlib-tutorial-st9yc3b4
  allocated      0      0     0 
       down      0      0     0 
 </pre></div>
@@ -818,28 +876,29 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFAV33j5 jovyan   python      F      2      1   32.92s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFA9mD4e jovyan   python      F      2      1   32.88s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFAY12Hm jovyan   python      F      2      1   32.83s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFA9mD4b jovyan   python      F      2      1   32.82s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFA9mD4c jovyan   python      F      2      1   32.79s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFAS55AP jovyan   python      F      2      1   32.78s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒFA9mD4d jovyan   python      F      2      1   32.68s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
-<span class=" -Color -Color-Bold -Color-Bold-Red">    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s jupyter-janj-lanl-executorlib-tutorial-9ce2an8u</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgDEeUA jovyan   python     CD      2      1   3.950s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgYWV8b jovyan   python     CD      2      1   3.945s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgDEeU7 jovyan   python     CD      2      1   3.934s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgDEeU8 jovyan   python     CD      2      1   3.925s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgDEeU9 jovyan   python     CD      2      1   3.917s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgVYWZu jovyan   python     CD      2      1   3.899s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒFgZzUQw jovyan   python     CD      2      1   3.827s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
+<span class=" -Color -Color-Bold -Color-Bold-Green">    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s jupyter-janj-lanl-executorlib-tutorial-st9yc3b4</span>
 
 </pre></div>
 </div>
 </div>
 </div>
-<section id="id1">
-<h3>FluxClusterExecutor<a class="headerlink" href="#id1" title="Link to this heading">#</a></h3>
-<p>The <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/2-hpc-cluster.html#flux">FluxClusterExecutor</a> is used in this demonstration primarily because flux can be installed on any workstation for testing. The <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/2-hpc-cluster.html#slurm">SlurmClusterExecutor</a> could be used analogously.</p>
+</section>
+<section id="id2">
+<h3>FluxClusterExecutor<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> is used in the same way as for GPAW. Each <code class="docutils literal notranslate"><span class="pre">evaluate_with_quantum_espresso()</span></code> call is submitted as an independent Flux job with <code class="docutils literal notranslate"><span class="pre">resource_dict={&quot;cores&quot;:</span> <span class="pre">2}</span></code>, giving each QE calculation two MPI tasks.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
@@ -847,7 +906,7 @@
 </div>
 </div>
 </div>
-<p>The for each strained structure a calculation task is submitted to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>. After the successful submission the current status of the flux queue is printed using <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code>. Finally, the results are collected by gathering the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#future-objects">concurrent.futures.Future</a> objects.</p>
+<p>The submission loop is identical to the GPAW case: submit all calculations first, then collect results. Because QE is an external executable, each function call can take longer than a GPAW call of equivalent size — the file I/O overhead of QE (reading/writing input and output files for each calculation) adds latency compared to the in-memory GPAW interface.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">future_dict</span> <span class="o">=</span> <span class="p">{}</span>
@@ -878,103 +937,103 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;    ƒj5Kaq9h jovyan   jovyan      R      1      1   0.139s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj2CiLmd jovyan   jovyan      R      1      1   0.261s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiy2ssps jovyan   jovyan      R      1      1   0.385s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiuqZRbm jovyan   jovyan      R      1      1   0.510s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒirmeunP jovyan   jovyan      R      1      1   0.630s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiobpSqd jovyan   jovyan      R      1      1   0.754s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒikL42mV jovyan   jovyan      R      1      1   0.881s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAV33j5 jovyan   python      F      2      1   32.92s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4e jovyan   python      F      2      1   32.88s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAY12Hm jovyan   python      F      2      1   32.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4b jovyan   python      F      2      1   32.82s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4c jovyan   python      F      2      1   32.79s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAS55AP jovyan   python      F      2      1   32.78s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4d jovyan   python      F      2      1   32.68s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;    ƒTv9SjPM jovyan   jovyan      R      1      1   0.141s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTrsgKKD jovyan   jovyan      R      1      1   0.270s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTojKqeo jovyan   jovyan      R      1      1   0.392s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTkcTMGj jovyan   jovyan      R      1      1   0.514s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒThU6scK jovyan   jovyan      R      1      1   0.637s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTeNiNWb jovyan   jovyan      R      1      1   0.759s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTbEMtrB jovyan   jovyan      R      1      1   0.880s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeUA jovyan   python     CD      2      1   3.950s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgYWV8b jovyan   python     CD      2      1   3.945s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU7 jovyan   python     CD      2      1   3.934s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU8 jovyan   python     CD      2      1   3.925s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU9 jovyan   python     CD      2      1   3.917s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgVYWZu jovyan   python     CD      2      1   3.899s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgZzUQw jovyan   python     CD      2      1   3.827s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [04:06&lt;00:00, 35.18s/it] 
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [03:26&lt;00:00, 29.48s/it] 
 </pre></div>
 </div>
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;    ƒirmeunP jovyan   jovyan     CD      1      1   4.126m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒikL42mV jovyan   jovyan     CD      1      1   4.009m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiobpSqd jovyan   jovyan     CD      1      1   2.076m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiy2ssps jovyan   jovyan     CD      1      1   1.865m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiuqZRbm jovyan   jovyan     CD      1      1    1.61m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj2CiLmd jovyan   jovyan     CD      1      1   1.485m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj5Kaq9h jovyan   jovyan     CD      1      1   25.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAV33j5 jovyan   python      F      2      1   32.92s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4e jovyan   python      F      2      1   32.88s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAY12Hm jovyan   python      F      2      1   32.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4b jovyan   python      F      2      1   32.82s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4c jovyan   python      F      2      1   32.79s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAS55AP jovyan   python      F      2      1   32.78s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4d jovyan   python      F      2      1   32.68s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;    ƒTbEMtrB jovyan   jovyan     CD      1      1   3.466m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒThU6scK jovyan   jovyan     CD      1      1   3.005m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTeNiNWb jovyan   jovyan     CD      1      1   2.036m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTojKqeo jovyan   jovyan     CD      1      1   1.833m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTkcTMGj jovyan   jovyan     CD      1      1   1.597m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTrsgKKD jovyan   jovyan     CD      1      1   1.473m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTv9SjPM jovyan   jovyan     CD      1      1   25.62s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeUA jovyan   python     CD      2      1   3.950s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgYWV8b jovyan   python     CD      2      1   3.945s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU7 jovyan   python     CD      2      1   3.934s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU8 jovyan   python     CD      2      1   3.925s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU9 jovyan   python     CD      2      1   3.917s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgVYWZu jovyan   python     CD      2      1   3.899s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgZzUQw jovyan   python     CD      2      1   3.827s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
 </div>
 </div>
-<p>The resulting energies for the different volumes are fitted using a 3rd order polynomial to derive the bulk modulus as second derivative multiplied by the equilibrium volume.</p>
+<p>The EOS fitting uses the same <code class="docutils literal notranslate"><span class="pre">analyse_results_for_energy_volume_curve()</span></code> function as before. The <code class="docutils literal notranslate"><span class="pre">equilibrium_parameters</span></code> call extracts <span class="math notranslate nohighlight">\(V_0\)</span> and <span class="math notranslate nohighlight">\(E_0\)</span> from the fit to anchor the curve.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fit_dict</span> <span class="o">=</span> <span class="n">analyse_results_for_energy_volume_curve</span><span class="p">(</span>
@@ -987,7 +1046,7 @@
 </div>
 </div>
 </div>
-<p>The final energy volume curve plot summarizes the results of this calculation.</p>
+<p>The energy–volume curve for aluminium computed with Quantum ESPRESSO. The bulk modulus value should be close to the experimental value of ~76 GPa and to the GPAW result, validating both the calculation setup and the workflow.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">],</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;energy&quot;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$B_0$= </span><span class="si">%0.2f</span><span class="s2"> GPa&quot;</span> <span class="o">%</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;bulkmodul_eq&quot;</span><span class="p">])</span>
@@ -1000,20 +1059,21 @@
 <div class="cell_output docutils container">
 <div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
 &lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
-/tmp/ipykernel_2710/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
+/tmp/ipykernel_3044/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
   plt.xlabel(&quot;Volume [$\AA^3$]&quot;)
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f30210bb110&gt;
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f2d9af02850&gt;
 </pre></div>
 </div>
-<img alt="_images/766cba83ccc2b2eced791dbdf7284dee253048eaa4dc5afabc00933c9d9b940e.png" src="_images/766cba83ccc2b2eced791dbdf7284dee253048eaa4dc5afabc00933c9d9b940e.png" />
+<img alt="_images/50ebb471fe4f10ab0f4809fdb983730bc37bd6b3b20f7034f5ea1ffa73c24f3b.png" src="_images/50ebb471fe4f10ab0f4809fdb983730bc37bd6b3b20f7034f5ea1ffa73c24f3b.png" />
 </div>
 </div>
 </section>
-<section id="id2">
-<h3>FluxJobExecutor<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
-<p>In analogy to the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/2-hpc-cluster.html#flux">FluxClusterExecutor</a> the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/3-hpc-job.html#flux">FluxJobExecutor</a> can be applied to distribute simulation within a given queuing system allocation. The calculation of the bulk modulus with <a class="reference external" href="https://www.quantum-espresso.org">quantum espresso</a> is implemented in the same way.</p>
+<section id="id3">
+<h3>FluxJobExecutor<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> requires <code class="docutils literal notranslate"><span class="pre">flux_executor_nesting=True</span></code> for the Quantum ESPRESSO workflow because the <code class="docutils literal notranslate"><span class="pre">evaluate_with_quantum_espresso()</span></code> function <strong>internally calls <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span> <span class="pre">pw.x</span></code></strong> — a nested Flux job submission. Flux must be told to allow this nesting explicitly.</p>
+<p>This is different from the GPAW case where GPAW’s MPI parallelism is managed by <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> within the Python process and does not require nested Flux jobs.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
@@ -1021,7 +1081,7 @@
 </div>
 </div>
 </div>
-<p>The for each strained structure a calculation task is submitted to the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>. After the successful submission the current status of the flux queue is printed using <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code>. Finally, the results are collected by gathering the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#future-objects">concurrent.futures.Future</a> objects.</p>
+<p>The submission loop for <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> is identical to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> case. The <code class="docutils literal notranslate"><span class="pre">flux_executor_nesting=True</span></code> flag is the only difference in the executor configuration.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">future_dict</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1052,131 +1112,131 @@
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;   ƒ49ujdneC jovyan   flux        R      1      1   0.936s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ujdneB jovyan   flux        R      1      1   0.936s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ugfp5V jovyan   flux        R      1      1   0.938s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ucDrEV jovyan   flux        R      1      1   0.952s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ucDrEU jovyan   flux        R      1      1   0.952s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ucDrET jovyan   flux        R      1      1   0.952s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49uNsxhM jovyan   flux        R      1      1   0.953s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒirmeunP jovyan   jovyan     CD      1      1   4.126m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒikL42mV jovyan   jovyan     CD      1      1   4.009m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiobpSqd jovyan   jovyan     CD      1      1   2.076m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiy2ssps jovyan   jovyan     CD      1      1   1.865m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiuqZRbm jovyan   jovyan     CD      1      1    1.61m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj2CiLmd jovyan   jovyan     CD      1      1   1.485m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj5Kaq9h jovyan   jovyan     CD      1      1   25.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAV33j5 jovyan   python      F      2      1   32.92s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4e jovyan   python      F      2      1   32.88s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAY12Hm jovyan   python      F      2      1   32.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4b jovyan   python      F      2      1   32.82s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4c jovyan   python      F      2      1   32.79s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAS55AP jovyan   python      F      2      1   32.78s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4d jovyan   python      F      2      1   32.68s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;   ƒ34eJsNnT jovyan   flux        R      1      1   0.940s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eHPPW7 jovyan   flux        R      1      1   0.942s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eERQwS jovyan   flux        R      1      1   0.956s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eERQwR jovyan   flux        R      1      1   0.956s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eCwRf5 jovyan   flux        R      1      1   0.956s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34e9yT6P jovyan   flux        R      1      1   0.956s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34dybY7y jovyan   flux        R      1      1   0.957s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTbEMtrB jovyan   jovyan     CD      1      1   3.466m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒThU6scK jovyan   jovyan     CD      1      1   3.005m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTeNiNWb jovyan   jovyan     CD      1      1   2.036m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTojKqeo jovyan   jovyan     CD      1      1   1.833m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTkcTMGj jovyan   jovyan     CD      1      1   1.597m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTrsgKKD jovyan   jovyan     CD      1      1   1.473m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTv9SjPM jovyan   jovyan     CD      1      1   25.62s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeUA jovyan   python     CD      2      1   3.950s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgYWV8b jovyan   python     CD      2      1   3.945s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU7 jovyan   python     CD      2      1   3.934s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU8 jovyan   python     CD      2      1   3.925s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU9 jovyan   python     CD      2      1   3.917s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgVYWZu jovyan   python     CD      2      1   3.899s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgZzUQw jovyan   python     CD      2      1   3.827s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [03:54&lt;00:00, 33.53s/it] 
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>100%|██████████| 7/7 [03:23&lt;00:00, 29.10s/it] 
 </pre></div>
 </div>
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO&#39;,
- &#39;   ƒ49ucDrEV jovyan   flux       CD      1      1   3.939m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ucDrEU jovyan   flux       CD      1      1   2.883m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ucDrET jovyan   flux       CD      1      1   2.059m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ujdneB jovyan   flux       CD      1      1   1.856m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ugfp5V jovyan   flux       CD      1      1   1.596m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49uNsxhM jovyan   flux       CD      1      1     1.5m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;   ƒ49ujdneC jovyan   flux       CD      1      1   26.23s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒirmeunP jovyan   jovyan     CD      1      1   4.126m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒikL42mV jovyan   jovyan     CD      1      1   4.009m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiobpSqd jovyan   jovyan     CD      1      1   2.076m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiy2ssps jovyan   jovyan     CD      1      1   1.865m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒiuqZRbm jovyan   jovyan     CD      1      1    1.61m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj2CiLmd jovyan   jovyan     CD      1      1   1.485m &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒj5Kaq9h jovyan   jovyan     CD      1      1   25.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAV33j5 jovyan   python      F      2      1   32.92s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4e jovyan   python      F      2      1   32.88s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAY12Hm jovyan   python      F      2      1   32.83s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4b jovyan   python      F      2      1   32.82s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4c jovyan   python      F      2      1   32.79s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFAS55AP jovyan   python      F      2      1   32.78s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒFA9mD4d jovyan   python      F      2      1   32.68s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7kyq7Ww jovyan   executorl+  F      1      1   4.536s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7eVGFwM jovyan   executorl+  F      1      1   4.685s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7hf6it7 jovyan   executorl+  F      1      1   4.499s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7bEyq9Z jovyan   executorl+  F      1      1   4.488s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7Y87LmV jovyan   executorl+  F      1      1   4.602s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7V4Cpx7 jovyan   executorl+  F      1      1   4.563s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
- &#39;    ƒ7RrtNj1 jovyan   executorl+  F      1      1   4.425s &#39;
- &#39;jupyter-janj-lanl-executorlib-tutorial-9ce2an8u&#39;,
+ &#39;   ƒ34e9yT6P jovyan   flux       CD      1      1   3.423m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eERQwR jovyan   flux       CD      1      1   3.063m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eCwRf5 jovyan   flux       CD      1      1   2.036m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eHPPW7 jovyan   flux       CD      1      1    1.83m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eERQwS jovyan   flux       CD      1      1   1.584m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34dybY7y jovyan   flux       CD      1      1    1.47m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;   ƒ34eJsNnT jovyan   flux       CD      1      1   25.78s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTbEMtrB jovyan   jovyan     CD      1      1   3.466m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒThU6scK jovyan   jovyan     CD      1      1   3.005m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTeNiNWb jovyan   jovyan     CD      1      1   2.036m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTojKqeo jovyan   jovyan     CD      1      1   1.833m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTkcTMGj jovyan   jovyan     CD      1      1   1.597m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTrsgKKD jovyan   jovyan     CD      1      1   1.473m &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒTv9SjPM jovyan   jovyan     CD      1      1   25.62s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeUA jovyan   python     CD      2      1   3.950s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgYWV8b jovyan   python     CD      2      1   3.945s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU7 jovyan   python     CD      2      1   3.934s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU8 jovyan   python     CD      2      1   3.925s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgDEeU9 jovyan   python     CD      2      1   3.917s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgVYWZu jovyan   python     CD      2      1   3.899s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒFgZzUQw jovyan   python     CD      2      1   3.827s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ65SSN95 jovyan   executorl+ CD      1      1   4.926s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ62F7uuy jovyan   executorl+ CD      1      1   4.747s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5xvPXH9 jovyan   executorl+ CD      1      1   4.669s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5uj5543 jovyan   executorl+ CD      1      1   4.731s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5raibPd jovyan   executorl+ CD      1      1   4.572s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5oPQ9AX jovyan   executorl+ CD      1      1   4.591s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
+ &#39;    ƒ5kGXenT jovyan   executorl+ CD      1      1   4.506s &#39;
+ &#39;jupyter-janj-lanl-executorlib-tutorial-st9yc3b4&#39;,
  &#39;&#39;]
 </pre></div>
 </div>
 </div>
 </div>
-<p>The resulting energies for the different volumes are fitted using a 3rd order polynomial to derive the bulk modulus as second derivative multiplied by the equilibrium volume.</p>
+<p>EOS fitting is identical across all executor types — the scientific result depends only on the energies computed by Quantum ESPRESSO, not on which executor orchestrated the calculations.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fit_dict</span> <span class="o">=</span> <span class="n">analyse_results_for_energy_volume_curve</span><span class="p">(</span>
@@ -1189,7 +1249,7 @@
 </div>
 </div>
 </div>
-<p>The final energy volume curve plot summarizes the results of this calculation.</p>
+<p>The final energy–volume curve from <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> with Quantum ESPRESSO. Comparing with the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> result confirms that both executor backends produce consistent scientific output.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;volume&quot;</span><span class="p">],</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;energy&quot;</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$B_0$= </span><span class="si">%0.2f</span><span class="s2"> GPa&quot;</span> <span class="o">%</span> <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;bulkmodul_eq&quot;</span><span class="p">])</span>
@@ -1202,14 +1262,14 @@
 <div class="cell_output docutils container">
 <div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
 &lt;&gt;:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
-/tmp/ipykernel_2710/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
+/tmp/ipykernel_3044/4024930470.py:2: SyntaxWarning: invalid escape sequence &#39;\A&#39;
   plt.xlabel(&quot;Volume [$\AA^3$]&quot;)
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f302116c910&gt;
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.legend.Legend at 0x7f2d9af5bed0&gt;
 </pre></div>
 </div>
-<img alt="_images/39b93aadad61489349e4b5c8e0b634e431e4ab19abd2401098db4920f4bf549c.png" src="_images/39b93aadad61489349e4b5c8e0b634e431e4ab19abd2401098db4920f4bf549c.png" />
+<img alt="_images/6d3487070292cb32f6230daf3f057ec585fd29132fe665fedb660b089f33d375.png" src="_images/6d3487070292cb32f6230daf3f057ec585fd29132fe665fedb660b089f33d375.png" />
 </div>
 </div>
 </section>
@@ -1283,13 +1343,17 @@
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gpaw">GPAW</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generating-strained-structures">Generating strained structures</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fitting-the-equation-of-state">Fitting the equation of state</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quantum-espresso">Quantum Espresso</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">FluxClusterExecutor</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">FluxJobExecutor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quantum-espresso">Quantum ESPRESSO</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pseudopotentials">Pseudopotentials</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Generating strained structures</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">FluxClusterExecutor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">FluxJobExecutor</a></li>
 </ul>
 </li>
 </ul>

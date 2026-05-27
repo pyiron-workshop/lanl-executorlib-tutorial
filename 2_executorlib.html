@@ -345,17 +345,20 @@
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-standard-library">Python Standard Library</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-standard-library">Python Standard Library</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#future-objects-and-asynchronous-execution"><code class="docutils literal notranslate"><span class="pre">Future</span></code> objects and asynchronous execution</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#executor-types">Executor Types</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#singlenodeexecutor">SingleNodeExecutor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cache">Cache</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#submission-template">Submission Template</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi-parallel-functions">MPI parallel functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi-parallel-functions">MPI-parallel functions</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block Allocation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block allocation</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initialization-function">Initialization function</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nested-executors">Nested Executors</a></li>
 </ul>
@@ -375,12 +378,24 @@
 <h1>executorlib<a class="headerlink" href="#executorlib" title="Link to this heading">#</a></h1>
 <section id="python-standard-library">
 <h2>Python Standard Library<a class="headerlink" href="#python-standard-library" title="Link to this heading">#</a></h2>
-<p>executorlib is based on the <code class="docutils literal notranslate"><span class="pre">Executor</span></code> interface defined in the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html">Python Standard Library</a>. The Python Standard Library, defines two interfaces:</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> extends the <code class="docutils literal notranslate"><span class="pre">Executor</span></code> interface defined in the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html">Python Standard Library’s <code class="docutils literal notranslate"><span class="pre">concurrent.futures</span></code> module</a>. Before diving into <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> itself it is worth understanding the standard-library executors it is built on.</p>
+<p>The standard library defines two ready-made executor classes:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> for executing individual Python functions in separate threads.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> for executing individual Python functions in separate processes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> — runs Python functions in separate <strong>threads</strong> within the same process. Fast to start, but limited by Python’s Global Interpreter Lock (GIL) for CPU-bound work.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> — runs Python functions in separate <strong>processes</strong>. Circumvents the GIL for true CPU parallelism, but adds the overhead of spawning processes and serialising data.</p></li>
 </ul>
-<p>Let’s take the following example:</p>
+<p><strong>What executorlib adds on top:</strong>
+Both standard-library executors are limited to a single machine. <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> replaces the process-spawning backend with calls to an HPC job scheduler (SLURM or Flux), so the same <code class="docutils literal notranslate"><span class="pre">submit()</span></code> / <code class="docutils literal notranslate"><span class="pre">Future</span></code> API you already know scales from a laptop to thousands of HPC cores <em>without changing your Python code</em>.</p>
+<p><strong>Learning objectives:</strong> After this notebook you will be able to:</p>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">Future</span></code> objects to write non-blocking, asynchronous Python workflows</p></li>
+<li><p>Select the right <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> executor class for your use case</p></li>
+<li><p>Assign per-function computing resources (cores, GPUs, memory) with the <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code></p></li>
+<li><p>Use caching to avoid redundant computation</p></li>
+<li><p>Scale a serial workflow to HPC by swapping one class name</p></li>
+</ul>
+<hr class="docutils" />
+<p>Let’s start with the simple loop that we want to parallelise:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result_lst</span> <span class="o">=</span> <span class="p">[]</span>
@@ -397,7 +412,8 @@
 </div>
 </div>
 </div>
-<p>This can be rewritten using either the <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> or the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code>. In both cases we are using a <code class="docutils literal notranslate"><span class="pre">with</span></code> statement to start the executor and close it again once all tasks are completed. The <code class="docutils literal notranslate"><span class="pre">with</span></code> statement in this case helps to prevent orphan processes, just like a <code class="docutils literal notranslate"><span class="pre">with</span></code> statement is used for opening and closing files to make sure the file is closed correctly even if the routine reading the file fails.</p>
+<p>This can be rewritten using either the <code class="docutils literal notranslate"><span class="pre">ThreadPoolExecutor</span></code> or the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code>. In both cases we use a <code class="docutils literal notranslate"><span class="pre">with</span></code> statement to start the executor and shut it down once all tasks are finished. The <code class="docutils literal notranslate"><span class="pre">with</span></code> block ensures that background workers are cleaned up correctly even if an exception occurs — just as <code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">open(...)</span></code> ensures a file handle is closed regardless of errors.</p>
+<p>The key change from the plain loop is that <code class="docutils literal notranslate"><span class="pre">exe.submit(fn,</span> <span class="pre">*args)</span></code> <strong>returns immediately</strong> with a <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future"><code class="docutils literal notranslate"><span class="pre">concurrent.futures.Future</span></code></a> object rather than the actual result. The function runs in the background while the main thread continues. Calling <code class="docutils literal notranslate"><span class="pre">.result()</span></code> on the <code class="docutils literal notranslate"><span class="pre">Future</span></code> blocks until the result is available.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
@@ -442,53 +458,94 @@
 </div>
 </div>
 </div>
-<p>By using the <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future">concurrent.futures.Future</a> objects we can develop asynchronous Python scripts. Specifically the Python functions are executed in the background until <code class="docutils literal notranslate"><span class="pre">result()</span></code> is called.</p>
+<section id="future-objects-and-asynchronous-execution">
+<h3><code class="docutils literal notranslate"><span class="pre">Future</span></code> objects and asynchronous execution<a class="headerlink" href="#future-objects-and-asynchronous-execution" title="Link to this heading">#</a></h3>
+<p>A <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.Future"><code class="docutils literal notranslate"><span class="pre">concurrent.futures.Future</span></code></a> represents the <strong>eventual result</strong> of an asynchronous computation. The most important methods are:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Method</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">f.result()</span></code></p></td>
+<td><p>Block and return the result (or raise the exception if the function failed)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">f.done()</span></code></p></td>
+<td><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if the function has finished (without blocking)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">f.cancel()</span></code></p></td>
+<td><p>Attempt to cancel a pending function (not always possible)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>By collecting <code class="docutils literal notranslate"><span class="pre">Future</span></code> objects in a list and calling <code class="docutils literal notranslate"><span class="pre">.result()</span></code> only after all functions have been submitted, you allow the executor to run functions <strong>concurrently</strong> — the first call to <code class="docutils literal notranslate"><span class="pre">.result()</span></code> waits only as long as needed for that specific function, and any function that finished earlier is retrieved instantly.</p>
+<p>This pattern — submit all work first, collect results later — is the foundation of every <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> workflow.</p>
+</section>
 </section>
 <section id="executor-types">
 <h2>Executor Types<a class="headerlink" href="#executor-types" title="Link to this heading">#</a></h2>
-<p>Executorlib currently implements five different Executor classes:</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> currently provides five executor classes. They share the same <code class="docutils literal notranslate"><span class="pre">submit()</span></code> / <code class="docutils literal notranslate"><span class="pre">map()</span></code> / <code class="docutils literal notranslate"><span class="pre">Future</span></code> API but differ in <em>how</em> they dispatch work and <em>where</em> that work runs:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>Name</p></th>
 <th class="head"><p>Communication</p></th>
 <th class="head"><p>Application</p></th>
-<th class="head"><p>Internal Command</p></th>
+<th class="head"><p>Internal command</p></th>
+<th class="head"><p>Best used for</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code></p></td>
 <td><p>Socket</p></td>
-<td><p>Workstation</p></td>
+<td><p>Workstation / laptop</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">Popen()</span></code></p></td>
+<td><p>Development and testing</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code></p></td>
 <td><p>Files</p></td>
-<td><p>HPC</p></td>
+<td><p>HPC login node</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">sbatch</span></code></p></td>
+<td><p>Long-running jobs that outlive your session</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code></p></td>
 <td><p>Socket</p></td>
-<td><p>HPC</p></td>
+<td><p>Inside a SLURM job</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">srun</span></code></p></td>
+<td><p>Many short tasks within one allocation</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code></p></td>
 <td><p>Files</p></td>
-<td><p>HPC</p></td>
+<td><p>HPC / Flux instance</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code></p></td>
+<td><p>Long-running jobs; checkpointing</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code></p></td>
 <td><p>Socket</p></td>
-<td><p>HPC</p></td>
+<td><p>Inside a Flux job</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code></p></td>
+<td><p>High-throughput, low-latency task dispatch</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>In the following the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code>, <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> are introduced. The <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> behave analog to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and the <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> behaves analog to the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>, so they are not introduced here as SLURM is not available in the demonstration environment.</p>
+<p><strong>Cluster vs. Job executors — when to use which:</strong></p>
+<ul class="simple">
+<li><p>The <strong>Cluster executors</strong> (<code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code>, <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>) submit each Python function as a <em>new</em> scheduler job. The Python process that called <code class="docutils literal notranslate"><span class="pre">submit()</span></code> can be stopped while the functions are still in the queue or running; when the Python process is restarted the cached results are reloaded automatically. Choose these when your functions take minutes to hours.</p></li>
+<li><p>The <strong>Job executors</strong> (<code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code>, <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>) run <em>inside an existing allocation</em> and communicate with worker processes over sockets. This avoids the scheduler overhead of submitting one job per function call. Choose these when your functions are short (seconds to minutes) and you want low latency.</p></li>
+<li><p>The <strong><code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code></strong> mimics the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> / <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> behaviour but runs entirely on your local machine without any scheduler. Use it to develop and test workflows on a laptop before scaling to the cluster.</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Recommended workflow:</strong> Write and debug code using <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code>, then swap the &gt; class name to <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> or <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> when submitting to the cluster. &gt; No other code changes are required.</p>
+</div></blockquote>
+<p>In the following sections the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code>, <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>, and <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> are demonstrated. The SLURM equivalents (<code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code>, <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code>) behave identically and are omitted here because SLURM is not available in this demonstration environment.</p>
 </section>
 <section id="singlenodeexecutor">
 <h2>SingleNodeExecutor<a class="headerlink" href="#singlenodeexecutor" title="Link to this heading">#</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> is designed to start developing HPC workflows on your workstation. It internally works similar to the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> but supports a number of the more advanced functions introduced below. To switch from the <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code> to the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> you just have to update the name of the executor.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> is designed for <strong>developing and testing HPC workflows on your workstation</strong> — no scheduler required. Internally it spawns worker processes with Python’s <code class="docutils literal notranslate"><span class="pre">subprocess.Popen</span></code>, similar to <code class="docutils literal notranslate"><span class="pre">ProcessPoolExecutor</span></code>, but it also supports all of the advanced features introduced later in this notebook (caching, <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code>, <code class="docutils literal notranslate"><span class="pre">block_allocation</span></code>, nested executors, etc.).</p>
+<p><strong>Key principle: write once, run anywhere.</strong>
+Because every <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> executor shares the same API, you can develop a workflow with <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> on your laptop and scale it to a thousand-core HPC system by changing only the executor class name — the function definitions and the <code class="docutils literal notranslate"><span class="pre">submit()</span></code> calls remain identical.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">SingleNodeExecutor</span>
@@ -514,7 +571,14 @@
 </section>
 <section id="fluxclusterexecutor">
 <h2>FluxClusterExecutor<a class="headerlink" href="#fluxclusterexecutor" title="Link to this heading">#</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> submits Python functions from the login node to individual compute nodes. It is using file based communication, so the executor can be stopped while the functions are still waiting in the queue.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> submits each Python function as an <strong>individual Flux job</strong> using <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code>. It is designed to be called from the <strong>login node</strong> (or from inside a parent Flux instance) and uses the <strong>filesystem</strong> to exchange data between the main Python process and the worker processes.</p>
+<p><strong>File-based communication advantages:</strong></p>
+<ul class="simple">
+<li><p>The Python session that called <code class="docutils literal notranslate"><span class="pre">submit()</span></code> can be <strong>stopped</strong> (e.g. your SSH session disconnects or you close the notebook) while submitted functions are still queued or running. When you restart Python the futures are automatically reloaded from the cache.</p></li>
+<li><p>Dependencies between functions are expressed as futures and communicated directly to the Flux scheduler, so dependent jobs are queued but only released when their inputs are ready.</p></li>
+</ul>
+<p><strong>When to choose <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>:</strong>
+Use it when individual function calls are long (minutes to hours), when you want the resilience of filesystem-based checkpointing, or when you need to manage scheduler-level dependencies between tasks.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
@@ -556,7 +620,12 @@
 </div>
 <section id="cache">
 <h3>Cache<a class="headerlink" href="#cache" title="Link to this heading">#</a></h3>
-<p>The internal cache of the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> can be defined using the <code class="docutils literal notranslate"><span class="pre">cache_directory</span></code> parameter. To analyse the content of the current cache directory, we can use the <code class="docutils literal notranslate"><span class="pre">get_cache_data()</span></code> function:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> (and <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code>) persist every function call and its result to an HDF5 file in a <em>cache directory</em>. This enables two important properties:</p>
+<ol class="arabic simple">
+<li><p><strong>Resilience:</strong> if the Python session is interrupted the completed results are not lost.</p></li>
+<li><p><strong>Idempotency:</strong> if the same function is called with the same arguments a second time, the cached result is returned immediately without re-submitting to the scheduler.</p></li>
+</ol>
+<p>The cache directory is set with the <code class="docutils literal notranslate"><span class="pre">cache_directory</span></code> parameter (default: <code class="docutils literal notranslate"><span class="pre">./executorlib_cache</span></code>). To inspect the contents of the cache programmatically, use <code class="docutils literal notranslate"><span class="pre">get_cache_data()</span></code>:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
@@ -688,7 +757,9 @@
 </section>
 <section id="submission-template">
 <h3>Submission Template<a class="headerlink" href="#submission-template" title="Link to this heading">#</a></h3>
-<p>While for flux it is commonly not necessary to specify specific job scheduler configurations, this is usually the case with the <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> as SLURM is configured differently on every HPC. Internally executorlib uses the Python Simple Queuing System <a class="reference external" href="https://pysqa.readthedocs.io/">pysqa</a> interface:</p>
+<p>By default, <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> submits jobs with a minimal resource specification. For the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> this is usually sufficient because Flux uses a flexible resource model. However, the <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> typically <strong>requires</strong> a custom submission template because SLURM is configured differently on every cluster (different partition names, QOS policies, memory limits, module loads, etc.).</p>
+<p>Internally <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> uses <a class="reference external" href="https://pysqa.readthedocs.io/">pysqa</a> — the Python Simple Queuing System Adapter — to render job scripts from <a class="reference external" href="https://jinja.palletsprojects.com/">Jinja2</a> templates. The template variables (<code class="docutils literal notranslate"><span class="pre">{{job_name}}</span></code>, <code class="docutils literal notranslate"><span class="pre">{{cores}}</span></code>, etc.) are filled in automatically from the <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> passed to <code class="docutils literal notranslate"><span class="pre">submit()</span></code>.</p>
+<p>The template below demonstrates the pattern for Flux. For SLURM you would replace the <code class="docutils literal notranslate"><span class="pre">#</span> <span class="pre">flux:</span></code> comment directives with <code class="docutils literal notranslate"><span class="pre">#SBATCH</span></code> lines:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">submission_template</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -735,11 +806,56 @@
 </div>
 </div>
 </div>
-<p>When the same function is submitted with the same parameters it is not computed again, even if the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code> is updated.</p>
+<p>When the <strong>same function is called with the same arguments</strong> the cached result is returned immediately — even if the <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> has changed. This means you can safely re-run a notebook cell or restart a workflow without duplicating computation. The cache key is determined by the function’s source code, its name, and its serialised input arguments.</p>
+<blockquote>
+<div><p><strong>Important:</strong> The cache is <strong>not</strong> automatically cleared between runs. Call &gt; <code class="docutils literal notranslate"><span class="pre">shutil.rmtree(cache_directory)</span></code> (as shown in the Workflows notebook) or change the &gt; <code class="docutils literal notranslate"><span class="pre">cache_directory</span></code> path when you want to force recomputation.</p>
+</div></blockquote>
 </section>
 <section id="mpi-parallel-functions">
-<h3>MPI parallel functions<a class="headerlink" href="#mpi-parallel-functions" title="Link to this heading">#</a></h3>
-<p>Besides the option to specify the submission script the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code> also defines the computing resources. Here I demonstrate this for the number of CPU cores to use with an MPI parallel Python function. Still the same also applies for the number of threads of GPUs, basically all the resources which can be specified in the job scheduler can be assigned to individual Python functions using the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code>. A detailed list of the parameters for the <code class="docutils literal notranslate"><span class="pre">resource_dictionary</span></code> is available in the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/trouble_shooting.html#resource-dictionary">documentation</a>.</p>
+<h3>MPI-parallel functions<a class="headerlink" href="#mpi-parallel-functions" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> allows you to assign computing resources to <strong>individual Python functions</strong> using the <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> argument to <code class="docutils literal notranslate"><span class="pre">submit()</span></code>. This means different functions in the same workflow can use different amounts of parallelism — for example, a preprocessing step might run serially while the main computation uses 16 MPI ranks.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code> accepts the following keys:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;cores&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>Number of MPI tasks (CPU cores) for this function</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;threads_per_core&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>OpenMP threads per MPI rank</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;gpus_per_task&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p>GPUs assigned to this function</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;mem_per_worker&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">str</span></code></p></td>
+<td><p>Memory per worker, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;4GB&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;cwd&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">str</span></code></p></td>
+<td><p>Working directory for the function’s process</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;conda_environment_name&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">str</span></code></p></td>
+<td><p>Conda environment to activate</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;error_log_file&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">str</span></code></p></td>
+<td><p>File to capture errors (see Developer notebook)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A full reference is available in the <a class="reference external" href="https://executorlib.readthedocs.io/en/latest/trouble_shooting.html#resource-dictionary">executorlib troubleshooting documentation</a>.</p>
+<p>The example below submits an MPI-parallel function that uses <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> to discover how many ranks were allocated:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calc_mpi</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
@@ -768,12 +884,23 @@
 </div>
 </div>
 </div>
-<p>The advantage of defining the computing resources on a per Python function level is that it is much easier to parallize your code as you only have to modify the functions which actually benefit from the parallel execution, while the rest of the code remains serial.</p>
+<p>The key advantage of per-function resource assignment is that <strong>parallelism is introduced exactly where it is needed, without restructuring the rest of the workflow</strong>. A typical scientific workflow has a mixture of:</p>
+<ul class="simple">
+<li><p>Serial pre/post-processing steps (data loading, plotting, analysis)</p></li>
+<li><p>Parallel compute-intensive steps (DFT calculations, Monte Carlo sampling, molecular dynamics)</p></li>
+</ul>
+<p>With <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> you annotate only the parallel functions with a <code class="docutils literal notranslate"><span class="pre">resource_dict</span></code>. The serial parts of the code are untouched. This is much simpler than the alternative — writing the entire workflow in MPI or splitting it across multiple SLURM scripts.</p>
 </section>
 </section>
 <section id="fluxjobexecutor">
 <h2>FluxJobExecutor<a class="headerlink" href="#fluxjobexecutor" title="Link to this heading">#</a></h2>
-<p>In contrast to the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> and the <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code> both communicate via Sockets, which provides a performance benefit:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> (and its SLURM equivalent <code class="docutils literal notranslate"><span class="pre">SlurmJobExecutor</span></code>) runs <strong>inside an existing Flux allocation</strong> and communicates with worker processes over <strong>network sockets</strong> rather than through files. This has two consequences:</p>
+<ol class="arabic simple">
+<li><p><strong>Lower latency:</strong> socket messages are delivered in microseconds, compared to milliseconds for filesystem reads/writes. This matters when submitting thousands of short tasks.</p></li>
+<li><p><strong>No persistence:</strong> if the Python session is interrupted, in-flight results are lost (unlike the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>). The session must remain alive for the duration of the workflow.</p></li>
+</ol>
+<p><strong>When to choose <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>:</strong>
+Use it for high-throughput workflows with many short tasks (seconds to minutes each) where low overhead is important and you can guarantee the Python session will not be interrupted.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
@@ -819,8 +946,19 @@
 </div>
 </div>
 <section id="block-allocation">
-<h3>Block Allocation<a class="headerlink" href="#block-allocation" title="Link to this heading">#</a></h3>
-<p>To further improve the performance of the evaluation of the Python functions, we can activate <code class="docutils literal notranslate"><span class="pre">block_allocation=True</span></code>. In this mode a single Python process is reused to evaluate multiple Python functions, breaking the previous mapping of one Python function per Python process.</p>
+<h3>Block allocation<a class="headerlink" href="#block-allocation" title="Link to this heading">#</a></h3>
+<p>By default, each function submitted to the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> is dispatched to a <em>fresh</em> worker process that is started, runs the function, and then exits. This one-process-per-function model is simple but has overhead: Python imports, initialisation code, and any large data structures must be loaded anew for every call.</p>
+<p><strong>Block allocation</strong> (<code class="docutils literal notranslate"><span class="pre">block_allocation=True</span></code>) changes this: a pool of persistent worker processes is created at startup and each worker handles <strong>multiple function calls in sequence</strong>. Think of it as the difference between hiring a new contractor for every task (default) vs. hiring a full-time employee who handles tasks one after another (block allocation).</p>
+<p>Benefits:</p>
+<ul class="simple">
+<li><p>Eliminates per-function Python startup overhead</p></li>
+<li><p>Allows pre-loading large datasets once and reusing them across many function calls (see the <em>Initialization function</em> section below)</p></li>
+</ul>
+<p>Constraints:</p>
+<ul class="simple">
+<li><p>All functions submitted in block-allocation mode share the same resource allocation (set via <code class="docutils literal notranslate"><span class="pre">max_workers</span></code>)</p></li>
+<li><p>The functions must be safe to run sequentially in the same process (no hidden global state mutations between calls)</p></li>
+</ul>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
@@ -866,7 +1004,7 @@
 </div>
 </div>
 </div>
-<p>This functionality can be very helpful when a large number of similar computations are executed one after another.</p>
+<p>Block allocation is especially valuable when sampling a large parameter space with many short, similar function calls — for example, evaluating an energy function at thousands of atomic configurations, running a parameter sweep, or performing cross-validation in machine learning. The overhead of process startup and teardown is paid once per worker rather than once per function call.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
@@ -895,7 +1033,14 @@
 </section>
 <section id="initialization-function">
 <h3>Initialization function<a class="headerlink" href="#initialization-function" title="Link to this heading">#</a></h3>
-<p>Beyond just reusing the same Python process for multiple Python functions, we can also pre-load a dataset in this Python process and then access this pre-loaded dataset in multiple Python functions.</p>
+<p>Block allocation reuses worker processes across multiple function calls. The <code class="docutils literal notranslate"><span class="pre">init_function</span></code> parameter takes advantage of this by running <strong>setup code once when the worker starts</strong> and making the result available to all subsequent function calls via keyword arguments.</p>
+<p>Typical uses:</p>
+<ul class="simple">
+<li><p><strong>Pre-loading large datasets:</strong> read a multi-gigabyte file once and pass its handle to every function call, avoiding repeated I/O.</p></li>
+<li><p><strong>Establishing connections:</strong> open a database connection, simulation handle, or external process once and reuse it.</p></li>
+<li><p><strong>Pre-computing expensive setup:</strong> initialise an expensive model or data structure once.</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">init_function</span></code> must return a <strong>dictionary</strong>. Each key in that dictionary becomes an additional keyword argument in every function submitted to the executor. In the example below, <code class="docutils literal notranslate"><span class="pre">init_file_handle()</span></code> opens a file and returns <code class="docutils literal notranslate"><span class="pre">{&quot;file_handle&quot;:</span> <span class="pre">&lt;iterator&gt;}</span></code>, which means every submitted function automatically receives a <code class="docutils literal notranslate"><span class="pre">file_handle</span></code> keyword argument.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;large.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
@@ -943,7 +1088,26 @@
 </section>
 <section id="nested-executors">
 <h3>Nested Executors<a class="headerlink" href="#nested-executors" title="Link to this heading">#</a></h3>
-<p>The hierarchical nature of the flux job scheduler allows the creation of additional executorlib Executors inside the functions submitted to the Executor. This hierarchy can be beneficial to separate the logic to saturate the available computational resources.</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> supports creating additional executor instances <strong>inside the functions that are already submitted to an executor</strong> — a pattern called <em>nested executors</em>. This allows you to express hierarchical parallelism: the outer executor distributes coarse-grained tasks across nodes, and each task internally uses another executor to distribute fine-grained sub-tasks.</p>
+<p>The hierarchical nature of the Flux scheduler makes nested executors possible: a function running inside a Flux job can itself spawn further Flux sub-jobs using the same <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> / <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code> mechanism, as long as Flux nesting is enabled with <code class="docutils literal notranslate"><span class="pre">flux_executor_nesting=True</span></code>.</p>
+<p><strong>Why use nested executors?</strong></p>
+<p>Consider a workflow where you have 10 independent experiments, and each experiment internally performs 4 parallel simulation steps. You could flatten this into 40 individual submissions, but that mixes the experiment-level and step-level logic. With nested executors you express it naturally:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>outer FluxJobExecutor
+  └─ function: run_experiment(i)
+       └─ inner FluxJobExecutor
+            ├─ submit: step_a()
+            ├─ submit: step_b()
+            ├─ submit: step_c()
+            └─ submit: step_d()
+</pre></div>
+</div>
+<p><strong>Requirements:</strong></p>
+<ul class="simple">
+<li><p>Nesting must be explicitly enabled: <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor(flux_executor_nesting=True)</span></code></p></li>
+<li><p>The inner executor must also be a <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> and must request cores via <code class="docutils literal notranslate"><span class="pre">resource_dict={&quot;cores&quot;:</span> <span class="pre">N}</span></code></p></li>
+<li><p>This feature is only available with Flux (not SLURM) because SLURM does not support sub-job hierarchies within an allocation</p></li>
+</ul>
+<p>The example below demonstrates this: <code class="docutils literal notranslate"><span class="pre">calc_nested</span></code> creates an inner <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> inside a function that is itself submitted to an outer executor.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calc_nested</span><span class="p">():</span>
@@ -1040,17 +1204,20 @@
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-standard-library">Python Standard Library</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#python-standard-library">Python Standard Library</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#future-objects-and-asynchronous-execution"><code class="docutils literal notranslate"><span class="pre">Future</span></code> objects and asynchronous execution</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#executor-types">Executor Types</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#singlenodeexecutor">SingleNodeExecutor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cache">Cache</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#submission-template">Submission Template</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi-parallel-functions">MPI parallel functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi-parallel-functions">MPI-parallel functions</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block Allocation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#block-allocation">Block allocation</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#initialization-function">Initialization function</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nested-executors">Nested Executors</a></li>
 </ul>

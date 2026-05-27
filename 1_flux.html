@@ -354,8 +354,8 @@
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi4py-examples-with-flux">mpi4py Examples with Flux</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#multiple-flux-run-calls">Multiple flux run Calls</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-flux-run-and-split-the-mpi-communicator">One flux run and Split the MPI Communicator</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#multiple-flux-run-calls">Multiple <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> Calls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-flux-run-and-split-the-mpi-communicator">One <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> and Split the MPI Communicator</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#flux-python-interface">Flux Python Interface</a></li>
@@ -372,8 +372,11 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="flux">
 <h1>Flux<a class="headerlink" href="#flux" title="Link to this heading">#</a></h1>
-<p><a class="reference external" href="https://flux-framework.readthedocs.io">Flux</a> is a modern HPC resource manager and job scheduler similar to SLURM, but designed for hierarchical scheduling and many-task workflows.</p>
-<p>The basic user interaction is very similar:</p>
+<p><a class="reference external" href="https://flux-framework.readthedocs.io">Flux</a> is a modern HPC resource manager and job scheduler developed at Lawrence Livermore National Laboratory (LLNL). Like SLURM, it manages queues and dispatches jobs to compute nodes — but it is designed specifically for <strong>hierarchical scheduling</strong> and <strong>many-task workflows</strong>, making it an excellent match for the kind of Python-function-level parallelism that <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> uses.</p>
+<p><strong>Why Flux in this tutorial?</strong>
+LANL’s HPC systems run SLURM as the primary scheduler. Flux is used as a <em>second-level scheduler</em> that runs <em>inside</em> a SLURM job: you obtain an allocation with <code class="docutils literal notranslate"><span class="pre">sbatch</span></code>/<code class="docutils literal notranslate"><span class="pre">salloc</span></code>, start a Flux instance with <code class="docutils literal notranslate"><span class="pre">srun</span> <span class="pre">flux</span> <span class="pre">start</span></code>, and then use Flux commands to subdivide that allocation into many smaller tasks. This two-level approach lets you submit thousands of lightweight sub-jobs without overwhelming the SLURM scheduler with individual batch scripts.</p>
+<p>In this notebook’s Jupyter environment a Flux instance is already running, so you can use Flux commands directly without first obtaining a SLURM allocation.</p>
+<p>The basic command mapping is:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>SLURM</p></th>
@@ -384,31 +387,34 @@
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sbatch</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code></p></td>
-<td><p>submit a batch job</p></td>
+<td><p>submit a non-blocking job</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">srun</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code></p></td>
-<td><p>launch tasks interactively</p></td>
+<td><p>launch a blocking interactive job</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">squeue</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span></code></p></td>
-<td><p>inspect jobs</p></td>
+<td><p>inspect the job queue</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sinfo</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">resource</span> <span class="pre">list</span></code></p></td>
+<td><p>inspect available resources</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Read more about flux:</p>
+<p>Additional Flux references:</p>
 <ul class="simple">
-<li><p><a class="reference external" href="https://flux-framework.readthedocs.io/projects/flux-core/en/stable/guide/start.html#starting-with-slurm">Integrate flux with SLURM</a></p></li>
-<li><p><a class="reference external" href="https://flux-framework.org/cheat-sheet/">Cheat sheet</a></p></li>
+<li><p><a class="reference external" href="https://flux-framework.readthedocs.io/projects/flux-core/en/stable/guide/start.html#starting-with-slurm">Integrate Flux with SLURM</a></p></li>
+<li><p><a class="reference external" href="https://flux-framework.org/cheat-sheet/">Flux cheat sheet</a></p></li>
 <li><p><a class="reference external" href="https://flux-framework.readthedocs.io/en/latest/guides/learning_guide.html">Flux Learning Guide</a></p></li>
 </ul>
 <section id="basic-flux-commands">
 <h2>Basic Flux Commands<a class="headerlink" href="#basic-flux-commands" title="Link to this heading">#</a></h2>
 <section id="flux-start">
 <h3><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">start</span></code><a class="headerlink" href="#flux-start" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">start</span></code> launches a new Flux scheduler instance inside an existing allocation.</p>
-<p>This is commonly used together with SLURM:</p>
+<p><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">start</span></code> launches a new Flux scheduler instance inside an <strong>existing</strong> allocation. This is how Flux is used on top of SLURM at LANL:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
 <span class="c1">#SBATCH --output=time.out</span>
 <span class="c1">#SBATCH --error=error.out</span>
@@ -422,27 +428,36 @@
 srun<span class="w"> </span>flux<span class="w"> </span>start<span class="w"> </span>workflow.sh
 </pre></div>
 </div>
-<p>And in the workflow script <code class="docutils literal notranslate"><span class="pre">workflow.sh</span></code> we start the individual tasks as before:</p>
+<p>Once <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">start</span></code> is running, the script <code class="docutils literal notranslate"><span class="pre">workflow.sh</span></code> can use all Flux sub-commands to distribute work across the eight tasks that SLURM allocated:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py<span class="w"> </span><span class="p">&amp;</span>
 flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py<span class="w"> </span><span class="p">&amp;</span>
 <span class="nb">wait</span>
 </pre></div>
 </div>
-<p>In the jupyter environment the following commands can be directly executed.</p>
+<p>Inside the Jupyter environment used for this tutorial a Flux instance is already active, so the following commands can be run directly without a surrounding <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> / <code class="docutils literal notranslate"><span class="pre">srun</span> <span class="pre">flux</span> <span class="pre">start</span></code> wrapper.</p>
 </section>
 <section id="flux-resource-list">
 <h3><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">resource</span> <span class="pre">list</span></code><a class="headerlink" href="#flux-resource-list" title="Link to this heading">#</a></h3>
-<p>Inspect the available computing resources:</p>
+<p>Inspect the available computing resources managed by the current Flux instance:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>resource<span class="w"> </span>list
 </pre></div>
 </div>
 <p>Example output:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>     <span class="n">STATE</span> <span class="n">NNODES</span> <span class="n">NCORES</span> <span class="n">NGPUS</span> <span class="n">NODELIST</span>
       <span class="n">free</span>      <span class="mi">1</span>     <span class="mi">24</span>     <span class="mi">0</span> <span class="n">jupyter</span><span class="o">-</span><span class="n">pyiron</span><span class="o">-</span><span class="n">workshop</span><span class="o">-</span><span class="n">torlib</span><span class="o">-</span><span class="n">tutorial</span><span class="o">-</span><span class="n">fiekunpl</span>
- <span class="n">allocated</span>      <span class="mi">0</span>      <span class="mi">0</span>     <span class="mi">0</span> 
-      <span class="n">down</span>      <span class="mi">0</span>      <span class="mi">0</span>     <span class="mi">0</span> 
+ <span class="n">allocated</span>      <span class="mi">0</span>      <span class="mi">0</span>     <span class="mi">0</span>
+      <span class="n">down</span>      <span class="mi">0</span>      <span class="mi">0</span>     <span class="mi">0</span>
 </pre></div>
 </div>
+<p><strong>Column meanings:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">STATE</span></code>: current state of the resources — <code class="docutils literal notranslate"><span class="pre">free</span></code> (idle and available), <code class="docutils literal notranslate"><span class="pre">allocated</span></code> (in use by a running job), or <code class="docutils literal notranslate"><span class="pre">down</span></code> (unavailable, e.g. hardware fault)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NNODES</span></code>: number of compute nodes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NCORES</span></code>: total CPU cores across those nodes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NGPUS</span></code>: total GPUs across those nodes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NODELIST</span></code>: hostname(s) of the nodes</p></li>
+</ul>
+<p>Run this command before submitting work to confirm that the Flux instance has access to compute resources and that enough cores are free for your jobs.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span>resource<span class="w"> </span>list
@@ -461,12 +476,28 @@ flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span
 </section>
 <section id="flux-jobs">
 <h3><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span></code><a class="headerlink" href="#flux-jobs" title="Link to this heading">#</a></h3>
-<p>Inspect the Flux queue.</p>
+<p>Inspect the Flux job queue to monitor submitted and running jobs.</p>
+<p>List currently active (running or pending) jobs:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span><span class="nb">jobs</span>
 </pre></div>
 </div>
-<p>Show all jobs including completed jobs:</p>
+<p>Show <strong>all</strong> jobs including completed and failed ones:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span><span class="nb">jobs</span><span class="w"> </span>-a
+</pre></div>
+</div>
+<p>Example output columns:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>       <span class="n">JOBID</span> <span class="n">USER</span>     <span class="n">NAME</span>       <span class="n">ST</span> <span class="n">NTASKS</span> <span class="n">NNODES</span>     <span class="n">TIME</span> <span class="n">INFO</span>
+  <span class="n">ƒ76Mhphu</span>   <span class="n">jovyan</span>   <span class="n">python</span>      <span class="n">R</span>      <span class="mi">4</span>      <span class="mi">1</span>   <span class="mi">0</span><span class="p">:</span><span class="mi">02</span><span class="p">:</span><span class="mi">13</span> <span class="n">jupyter</span><span class="o">-...</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">JOBID</span></code>: a Flux-specific job identifier (prefixed with <code class="docutils literal notranslate"><span class="pre">ƒ</span></code>); use this to attach to or cancel a job</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ST</span></code>: job state — <code class="docutils literal notranslate"><span class="pre">R</span></code> (running), <code class="docutils literal notranslate"><span class="pre">PD</span></code> (pending), <code class="docutils literal notranslate"><span class="pre">CD</span></code> (completed), <code class="docutils literal notranslate"><span class="pre">F</span></code> (failed)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NTASKS</span></code>/<code class="docutils literal notranslate"><span class="pre">NNODES</span></code>: how many tasks and nodes were requested</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TIME</span></code>: elapsed wall-clock time</p></li>
+</ul>
+<p>To attach to a running or completed job and see its output:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>job<span class="w"> </span>attach<span class="w"> </span>&lt;JOBID&gt;
 </pre></div>
 </div>
 <div class="cell docutils container">
@@ -484,11 +515,44 @@ flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span
 </section>
 <section id="flux-submit">
 <h3><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code><a class="headerlink" href="#flux-submit" title="Link to this heading">#</a></h3>
-<p>Submit a non-interactive job to the Flux scheduler.</p>
+<p>Submit a <strong>non-blocking</strong> job to the Flux scheduler. The command returns immediately with a job ID; the job runs asynchronously in the background.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>submit<span class="w"> </span>--nodes<span class="o">=</span><span class="m">1</span><span class="w"> </span>--ntasks<span class="o">=</span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py
 </pre></div>
 </div>
-<p>Returns a Flux job ID.</p>
+<p>Returns a Flux job ID (e.g. <code class="docutils literal notranslate"><span class="pre">ƒ76Mhphu</span></code>) which you can use to track the job:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span><span class="nb">jobs</span><span class="w"> </span>-a<span class="w">            </span><span class="c1"># see status</span>
+flux<span class="w"> </span>job<span class="w"> </span>attach<span class="w"> </span>ƒ76Mhphu<span class="w">  </span><span class="c1"># retrieve output once finished</span>
+</pre></div>
+</div>
+<p>Common <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code> flags:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flag</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--nodes=N</span></code></p></td>
+<td><p>request N compute nodes</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--ntasks=N</span></code></p></td>
+<td><p>request N parallel tasks</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">pmi=pmix</span></code></p></td>
+<td><p>enable PMIx process-management interface for MPI</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--output=&lt;file&gt;</span></code></p></td>
+<td><p>redirect stdout to a file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--error=&lt;file&gt;</span></code></p></td>
+<td><p>redirect stderr to a file</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<div><p><strong>Analogy with SLURM:</strong> <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code> ≈ <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> — both are non-blocking and return a job ID.</p>
+</div></blockquote>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -549,11 +613,18 @@ flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span
 </section>
 <section id="flux-run">
 <h3><code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code><a class="headerlink" href="#flux-run" title="Link to this heading">#</a></h3>
-<p>Launch a blocking interactive job.</p>
+<p>Launch a <strong>blocking</strong> interactive job. The command waits until the job finishes and then returns, printing output directly to the terminal (or notebook cell).</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py
 </pre></div>
 </div>
-<p>Equivalent in spirit to interactive srun.</p>
+<p>Common <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> flags mirror those of <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code>; the most important for MPI work is <code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">pmi=pmix</span></code> which enables the PMIx bootstrap used by modern OpenMPI builds:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>Analogy with SLURM:</strong> <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> ≈ <code class="docutils literal notranslate"><span class="pre">srun</span></code> — both are blocking and print output in real time.</p>
+</div></blockquote>
+<p>Use <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> when you need to see output immediately (interactive debugging, tutorials). Use <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code> when submitting many jobs that should run in parallel without blocking your session.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py
@@ -588,15 +659,16 @@ flux<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span
 </section>
 <section id="mpi4py-examples-with-flux">
 <h2>mpi4py Examples with Flux<a class="headerlink" href="#mpi4py-examples-with-flux" title="Link to this heading">#</a></h2>
+<p>The same two strategies for distributing MPI work that were shown for SLURM in the previous notebook apply equally with Flux.</p>
 <section id="multiple-flux-run-calls">
-<h3>Multiple flux run Calls<a class="headerlink" href="#multiple-flux-run-calls" title="Link to this heading">#</a></h3>
-<p>In analogy to the SLURM example run with:</p>
+<h3>Multiple <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> Calls<a class="headerlink" href="#multiple-flux-run-calls" title="Link to this heading">#</a></h3>
+<p>Launch two independent four-task MPI jobs concurrently within the same Flux allocation:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py<span class="w"> </span><span class="p">&amp;</span>
 flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py<span class="w"> </span><span class="p">&amp;</span>
 <span class="nb">wait</span>
 </pre></div>
 </div>
-<p>This launches two independent MPI jobs of size 4 each.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">pmi=pmix</span></code> option enables the PMIx process-management interface, which is required for <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> to correctly discover all MPI ranks. Each <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> spawns a separate MPI job of size 4; the two jobs run simultaneously and each sees its own <code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py<span class="w"> </span><span class="p">&amp;</span><span class="w"> </span>flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>python<span class="w"> </span>script.py<span class="w"> </span><span class="p">&amp;</span><span class="w"> </span>wait
@@ -618,8 +690,8 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 </div>
 </section>
 <section id="one-flux-run-and-split-the-mpi-communicator">
-<h3>One flux run and Split the MPI Communicator<a class="headerlink" href="#one-flux-run-and-split-the-mpi-communicator" title="Link to this heading">#</a></h3>
-<p>Save as <code class="docutils literal notranslate"><span class="pre">mpisplit.py</span></code>:</p>
+<h3>One <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> and Split the MPI Communicator<a class="headerlink" href="#one-flux-run-and-split-the-mpi-communicator" title="Link to this heading">#</a></h3>
+<p>As an alternative to launching two separate <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> jobs, launch a single eight-task MPI job and divide the communicator inside Python. Save the following as <code class="docutils literal notranslate"><span class="pre">mpisplit.py</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mpi4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPI</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">task</span><span class="p">(</span><span class="n">comm</span><span class="p">):</span>
@@ -643,7 +715,7 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span><span class="nv">pmi</span><span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">8</span><span class="w"> </span>python<span class="w"> </span>mpisplit.py
 </pre></div>
 </div>
-<p>This launches one MPI job of size 8 and divides it into two logical communicators of size 4.</p>
+<p>This launches one MPI job of size 8 and divides it into two logical communicators of size 4. See the SLURM notebook for a detailed discussion of when to prefer this approach over multiple <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> calls.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mpi_lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
@@ -695,6 +767,7 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 </section>
 <section id="flux-python-interface">
 <h2>Flux Python Interface<a class="headerlink" href="#flux-python-interface" title="Link to this heading">#</a></h2>
+<p>Beyond the command-line tools (<code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">submit</span></code>, <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code>), Flux provides a native <strong>Python API</strong> in the <code class="docutils literal notranslate"><span class="pre">flux</span></code> package. This allows Python scripts to submit jobs programmatically — useful when the number of jobs or their parameters are determined at runtime:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">flux.job</span>
 
 <span class="n">jobid</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
@@ -708,6 +781,11 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 <span class="nb">print</span><span class="p">(</span><span class="n">jobid</span><span class="p">)</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">flux.Flux()</span></code> opens a connection to the running Flux broker. <code class="docutils literal notranslate"><span class="pre">JobspecV1.from_command()</span></code> constructs a job specification (equivalent to the flags passed on the CLI). <code class="docutils literal notranslate"><span class="pre">flux.job.submit()</span></code> submits the job non-blocking and returns a numeric job ID.</p>
+<blockquote>
+<div><p><strong>Why does this matter for executorlib?</strong>
+<code class="docutils literal notranslate"><span class="pre">executorlib</span></code>’s <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> use exactly this Python API &gt; internally to submit individual Python functions as Flux jobs. Understanding the Python &gt; interface helps demystify what executorlib is doing under the hood.</p>
+</div></blockquote>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">flux.job</span>
@@ -823,8 +901,8 @@ jupyter-pyiron-workshop-torlib-tutorial-bpficiu6
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi4py-examples-with-flux">mpi4py Examples with Flux</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#multiple-flux-run-calls">Multiple flux run Calls</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-flux-run-and-split-the-mpi-communicator">One flux run and Split the MPI Communicator</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#multiple-flux-run-calls">Multiple <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> Calls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#one-flux-run-and-split-the-mpi-communicator">One <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> and Split the MPI Communicator</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#flux-python-interface">Flux Python Interface</a></li>

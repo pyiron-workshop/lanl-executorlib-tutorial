@@ -349,7 +349,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#split-future">Split future</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exascale">Exascale</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exascale-many-task-pattern">Exascale many-task pattern</a></li>
 </ul>
             </nav>
         </div>
@@ -363,9 +363,34 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="workflows">
 <h1>Workflows<a class="headerlink" href="#workflows" title="Link to this heading">#</a></h1>
-<p>While submitting individual Python functions to the job scheduler is nice, one of the most under used features of modern jobs schedulers is the management of dependencies. You can read more about the dependency management in SLURM in their <a class="reference external" href="https://slurm.schedmd.com/sbatch.html#OPT_dependency">documentation</a>. Our hypothesis is that while people understand that their tasks depend on each other, the usage of the dependency feature or at least the automated usage of this feature in shell scripts is too complex so people instead manage the dependencies manually. To address this challenge executorlib implements the management of dependencies based on using the output of one function as an input to another function.</p>
+<p>One of the most powerful but underused features of modern HPC job schedulers is <strong>dependency management</strong>: the ability to declare that job B should not start until job A has finished. SLURM supports this via the <code class="docutils literal notranslate"><span class="pre">--dependency</span></code> flag in <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> (<a class="reference external" href="https://slurm.schedmd.com/sbatch.html#OPT_dependency">documentation</a>), and Flux has an equivalent mechanism.</p>
+<p>The challenge is that wiring up these dependencies manually — writing shell scripts that extract job IDs and feed them to subsequent <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> calls — is tedious and error-prone. Most researchers end up waiting for the entire first batch to finish before submitting the next batch, leaving compute nodes idle.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">executorlib</span></code>’s approach:</strong> Dependencies are expressed naturally in Python by passing a <code class="docutils literal notranslate"><span class="pre">Future</span></code> object as the argument to a subsequent <code class="docutils literal notranslate"><span class="pre">submit()</span></code> call. The executor automatically translates this into a scheduler dependency. You write normal Python; the executor manages the job graph.</p>
+<p><strong>Learning objectives:</strong> After this notebook you will be able to:</p>
+<ul class="simple">
+<li><p>Build dependency chains between Python functions using <code class="docutils literal notranslate"><span class="pre">Future</span></code> objects as arguments</p></li>
+<li><p>Visualise the dependency graph of a workflow</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>’s persistent-queue feature to survive Python session restarts</p></li>
+<li><p>Decompose multi-output futures with <code class="docutils literal notranslate"><span class="pre">split_future()</span></code> and <code class="docutils literal notranslate"><span class="pre">get_item_from_future()</span></code></p></li>
+<li><p>Apply the as-completed pattern for exascale many-task workflows</p></li>
+</ul>
 <section id="dependencies">
 <h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">#</a></h2>
+<p>When the <strong>output of one function is passed as an argument to another</strong>, <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> automatically creates a dependency: the second function will not be submitted to the scheduler until the first has completed and its result is available.</p>
+<p>The mechanism is straightforward:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">future_a</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">function_a</span><span class="p">,</span> <span class="n">arg1</span><span class="p">)</span>
+<span class="n">future_b</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">function_b</span><span class="p">,</span> <span class="n">future_a</span><span class="p">)</span>   <span class="c1"># waits for future_a</span>
+<span class="n">future_c</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">function_c</span><span class="p">,</span> <span class="n">future_b</span><span class="p">)</span>   <span class="c1"># waits for future_b</span>
+</pre></div>
+</div>
+<p>This is equivalent to a SLURM dependency chain:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">JOB_A</span><span class="o">=</span><span class="k">$(</span>sbatch<span class="w"> </span>job_a.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $NF}&#39;</span><span class="k">)</span>
+<span class="nv">JOB_B</span><span class="o">=</span><span class="k">$(</span>sbatch<span class="w"> </span>--dependency<span class="o">=</span>afterok:<span class="nv">$JOB_A</span><span class="w"> </span>job_b.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $NF}&#39;</span><span class="k">)</span>
+<span class="nv">JOB_C</span><span class="o">=</span><span class="k">$(</span>sbatch<span class="w"> </span>--dependency<span class="o">=</span>afterok:<span class="nv">$JOB_B</span><span class="w"> </span>job_c.sh<span class="k">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">executorlib</span></code> version is shorter, less error-prone, and naturally expresses the logic of the workflow in Python rather than shell scripting.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">plot_dependency_graph=True</span></code> option renders the dependency graph as a directed acyclic graph (DAG) — useful for verifying that the workflow structure is correct before committing to a long HPC run.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calc_add</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
@@ -412,7 +437,10 @@
 </section>
 <section id="fluxclusterexecutor">
 <h2>FluxClusterExecutor<a class="headerlink" href="#fluxclusterexecutor" title="Link to this heading">#</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> and the <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code> communicate their dependencies directly to the job scheduler. So even when the Python process is stopped the future objects are still executed. Then after the execution the Python process can be restarted and the corresponding future objects are reloaded.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> (and its SLURM equivalent <code class="docutils literal notranslate"><span class="pre">SlurmClusterExecutor</span></code>) handle dependencies differently from the <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>: they communicate dependencies <strong>directly to the Flux scheduler</strong> rather than managing them in-process.</p>
+<p><strong>What this means in practice:</strong></p>
+<p>When you submit a chain of dependent functions with <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>, each function becomes a Flux job. Flux holds the dependent jobs in its queue and only releases them when their dependencies have been satisfied — even if the Python session is stopped in the meantime. This gives the workflow <strong>session-independence</strong>: you can close your notebook, go home, and Flux will continue executing the job chain overnight. When you reconnect and reload the <code class="docutils literal notranslate"><span class="pre">Future</span></code> objects from the cache, their results are already available.</p>
+<p>Compare this with <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>, where the Python process must stay alive for the duration of the workflow because dependencies are tracked in-process.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
@@ -447,7 +475,8 @@
 </div>
 </div>
 </div>
-<p>To demonstrate this we are going to use the <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> without the <code class="docutils literal notranslate"><span class="pre">with</span></code> statement, but first we have to clear the cache to remove the already existing calculation:</p>
+<p>To demonstrate the session-independence of <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code>, the next cells use it <strong>without</strong> a <code class="docutils literal notranslate"><span class="pre">with</span></code> statement. The executor is created, work is submitted, then <code class="docutils literal notranslate"><span class="pre">exe.shutdown(wait=False)</span></code> is called immediately — the Python process does not wait for the jobs to finish. The submitted jobs continue running in the Flux queue. After checking the queue with <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">jobs</span> <span class="pre">-a</span></code>, a new executor instance is created to retrieve the results from the cache.</p>
+<p>First, the cache is cleared to remove results from the previous run:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
@@ -543,6 +572,10 @@
 </section>
 <section id="fluxjobexecutor">
 <h2>FluxJobExecutor<a class="headerlink" href="#fluxjobexecutor" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> handles dependencies <strong>in-process</strong>: when a <code class="docutils literal notranslate"><span class="pre">Future</span></code> is passed as an argument to <code class="docutils literal notranslate"><span class="pre">submit()</span></code>, the executor itself waits for that future to resolve before forwarding the call to the Flux worker. This means the Python session must remain alive for the full duration of the workflow.</p>
+<p><strong>Advantage over <code class="docutils literal notranslate"><span class="pre">FluxClusterExecutor</span></code> for dependency chains:</strong>
+Socket communication has much lower overhead than file I/O. For workflows with many short-running tasks linked in a dependency chain, <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code> can be significantly faster because it does not write an HDF5 file to disk for each function invocation.</p>
+<p>The same <code class="docutils literal notranslate"><span class="pre">calc_add</span></code> chain used in the previous sections runs identically with <code class="docutils literal notranslate"><span class="pre">FluxJobExecutor</span></code>:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
@@ -586,7 +619,20 @@
 </section>
 <section id="split-future">
 <h2>Split future<a class="headerlink" href="#split-future" title="Link to this heading">#</a></h2>
-<p>In many cases it is not directly possible to use the output of one function as an input of another function. For example a function might have multiple outputs, a list as an output where you only want to use one element of the list as an input to the next function or a dictionary as an output where you only want to use one value of the dictionary as an input of the next function. To address this challenge executorlib introduces two special functions <code class="docutils literal notranslate"><span class="pre">split_future()</span></code> and <code class="docutils literal notranslate"><span class="pre">get_item_from_future()</span></code>. They are demonstrated below with the <code class="docutils literal notranslate"><span class="pre">SingleNodeExecutor</span></code> but work equally well for all different types of executors.</p>
+<p>In many workflows the output of one function cannot be directly fed into the next because the output is a <strong>tuple, list, or dictionary</strong> and only one element is needed downstream.</p>
+<p>Naïvely you might call <code class="docutils literal notranslate"><span class="pre">.result()</span></code> to unpack the output:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>          <span class="c1"># blocks here</span>
+<span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">result</span>                  <span class="c1"># then unpack</span>
+<span class="n">next_future</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>   <span class="c1"># then submit</span>
+</pre></div>
+</div>
+<p>This defeats the purpose of async execution: the call to <code class="docutils literal notranslate"><span class="pre">.result()</span></code> blocks the main thread until the first function finishes, eliminating any overlap between the first and second functions.</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> provides two helper functions that solve this <strong>without blocking</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">split_future(future,</span> <span class="pre">count=N)</span></code> — splits a future whose result is a tuple or list of length <code class="docutils literal notranslate"><span class="pre">N</span></code> into <code class="docutils literal notranslate"><span class="pre">N</span></code> individual futures, one per element.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_item_from_future(future,</span> <span class="pre">key)</span></code> — extracts a single item from a future whose result is a list, tuple, or dictionary, returning it as a new future.</p></li>
+</ul>
+<p>Both helpers return <code class="docutils literal notranslate"><span class="pre">Future</span></code> objects immediately (without blocking) and can be passed directly to subsequent <code class="docutils literal notranslate"><span class="pre">submit()</span></code> calls, preserving the fully non-blocking dependency chain.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">split_future</span><span class="p">,</span> <span class="n">get_item_from_future</span>
@@ -643,9 +689,17 @@
 </div>
 </div>
 </section>
-<section id="exascale">
-<h2>Exascale<a class="headerlink" href="#exascale" title="Link to this heading">#</a></h2>
-<p>A typical task for exascale computing is submitting a large number of tasks and then once a subset of these tasks are completed already start processing those while the remaining tasks are still waiting in the queue or are currently running.</p>
+<section id="exascale-many-task-pattern">
+<h2>Exascale many-task pattern<a class="headerlink" href="#exascale-many-task-pattern" title="Link to this heading">#</a></h2>
+<p>A common pattern in large-scale scientific computing — sometimes called the <em>eager aggregation</em> or <em>as-completed</em> pattern — is:</p>
+<ol class="arabic simple">
+<li><p>Submit a large number of independent tasks (hundreds to thousands)</p></li>
+<li><p>As soon as <strong>any subset</strong> of tasks completes, process those results immediately</p></li>
+<li><p>Continue collecting results from remaining tasks as they finish</p></li>
+</ol>
+<p>This avoids the inefficiency of waiting for <em>all</em> tasks to finish before post-processing any of them. On an exascale machine with variable task runtimes, the slow tail tasks should not block analysis of the already-finished fast tasks.</p>
+<p><code class="docutils literal notranslate"><span class="pre">executorlib</span></code> supports this pattern by allowing you to filter futures with <a class="reference external" href="https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.as_completed"><code class="docutils literal notranslate"><span class="pre">concurrent.futures.as_completed()</span></code></a> from the standard library, or by checking <code class="docutils literal notranslate"><span class="pre">future.done()</span></code> in a polling loop.</p>
+<p>The example below simulates this: most tasks finish quickly, but every fifth task sleeps for five seconds. A secondary aggregation function (<code class="docutils literal notranslate"><span class="pre">sum_and_elements</span></code>) is submitted as soon as a batch of results is available, without waiting for the slow tasks.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">sleep</span>
@@ -763,7 +817,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxclusterexecutor">FluxClusterExecutor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fluxjobexecutor">FluxJobExecutor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#split-future">Split future</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exascale">Exascale</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exascale-many-task-pattern">Exascale many-task pattern</a></li>
 </ul>
   </nav></div>
 

@@ -349,8 +349,8 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#srun"><code class="docutils literal notranslate"><span class="pre">srun</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#squeue"><code class="docutils literal notranslate"><span class="pre">squeue</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi4py"><code class="docutils literal notranslate"><span class="pre">mpi4py</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-split-the-allocation-with-multiple-srun-calls">Option 1: Split the Allocation with Multiple srun Calls</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-use-one-srun-and-split-communicators-in-python">Option 2: Use One srun and Split Communicators in Python</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-split-the-allocation-with-multiple-srun-calls">Option 1: Split the Allocation with Multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code> Calls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-use-one-srun-and-split-communicators-in-python">Option 2: Use One <code class="docutils literal notranslate"><span class="pre">srun</span></code> and Split Communicators in Python</a></li>
 </ul>
 </li>
 </ul>
@@ -366,17 +366,27 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="slurm">
 <h1>SLURM<a class="headerlink" href="#slurm" title="Link to this heading">#</a></h1>
-<p>The <a class="reference external" href="https://slurm.schedmd.com">Simple Linux Utility for Resource Management (SLURM)</a> job scheduler is currently used on most HPC systems. Side note the company behind SLURM named <a class="reference external" href="https://blogs.nvidia.com/blog/nvidia-acquires-schedmd/">SchedMD was recently acquired by Nvidia</a>. Nevertheless, users primarily interact with it through three primary commands:</p>
+<p>The <a class="reference external" href="https://slurm.schedmd.com">Simple Linux Utility for Resource Management (SLURM)</a> job scheduler is currently used on most HPC systems, including LANL’s flagship machines such as Chicoma and Venado. <em>Side note: the company behind SLURM named <a class="reference external" href="https://blogs.nvidia.com/blog/nvidia-acquires-schedmd/">SchedMD was recently acquired by Nvidia</a>, but day-to-day usage is unchanged for end users.</em></p>
+<p><strong>Why does this matter?</strong>
+On a shared HPC cluster you cannot simply <code class="docutils literal notranslate"><span class="pre">ssh</span></code> directly into a compute node and run a simulation interactively. The cluster is a shared resource used simultaneously by many research groups. SLURM acts as a traffic controller: it accepts resource requests, queues jobs, enforces fair-share scheduling, and dispatches work to nodes when the requested resources become available. Understanding SLURM’s three core commands is the minimum required to run jobs on any LANL system.</p>
+<p><strong>Learning objectives:</strong> After this notebook you will know how to:</p>
+<ul class="simple">
+<li><p>Submit batch jobs with <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> and inspect their status with <code class="docutils literal notranslate"><span class="pre">squeue</span></code></p></li>
+<li><p>Launch parallel tasks inside an existing allocation with <code class="docutils literal notranslate"><span class="pre">srun</span></code></p></li>
+<li><p>Write and run MPI-parallel Python scripts with <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code></p></li>
+<li><p>Choose between splitting an allocation via multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code> calls vs. splitting a single MPI communicator inside Python — and understand the tradeoffs of each approach</p></li>
+</ul>
+<hr class="docutils" />
 <section id="sbatch">
 <h2><code class="docutils literal notranslate"><span class="pre">sbatch</span></code><a class="headerlink" href="#sbatch" title="Link to this heading">#</a></h2>
-<p>Submit a batch job script from the head node or login node of the high performance computer (HPC) to the job scheduler.</p>
+<p>Submit a batch job script from the <strong>head node</strong> (also called the <em>login node</em>) of the HPC system to the job scheduler. The job is queued and dispatched to compute nodes when the requested resources are available; <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> returns immediately after submission so your terminal session is not blocked.</p>
 <p>Typical usage:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sbatch<span class="w"> </span>job.sh
 </pre></div>
 </div>
 <p>The script usually contains:</p>
 <ul class="simple">
-<li><p>resource requests (–nodes, –ntasks, –time, etc.)</p></li>
+<li><p>resource requests (<code class="docutils literal notranslate"><span class="pre">--nodes</span></code>, <code class="docutils literal notranslate"><span class="pre">--ntasks</span></code>, <code class="docutils literal notranslate"><span class="pre">--time</span></code>, etc.)</p></li>
 <li><p>environment / module loading</p></li>
 <li><p>application launch commands</p></li>
 </ul>
@@ -395,14 +405,19 @@
 srun<span class="w"> </span>hostname
 </pre></div>
 </div>
-<p>This example is going to return the <code class="docutils literal notranslate"><span class="pre">hostname</span></code> eight times, given the number of tasks is set to eight.</p>
+<p>This example is going to return the <code class="docutils literal notranslate"><span class="pre">hostname</span></code> eight times, given the number of tasks is set to eight. The <code class="docutils literal notranslate"><span class="pre">#SBATCH</span></code> lines are directives parsed by the scheduler before the script runs; they are comments as far as bash is concerned, so the script is also valid shell.</p>
+<blockquote>
+<div><p><strong>Tip:</strong> Always set <code class="docutils literal notranslate"><span class="pre">--output</span></code> and <code class="docutils literal notranslate"><span class="pre">--error</span></code> so that standard output and standard error from your job are captured in files you can inspect after the job finishes. Without these flags output is often discarded.</p>
+</div></blockquote>
 </section>
 <section id="srun">
 <h2><code class="docutils literal notranslate"><span class="pre">srun</span></code><a class="headerlink" href="#srun" title="Link to this heading">#</a></h2>
-<p>Launch parallel tasks inside an allocation.</p>
+<p>Launch parallel tasks <strong>inside</strong> an allocation. <code class="docutils literal notranslate"><span class="pre">srun</span></code> is the primary way to start MPI jobs and to split a large allocation into smaller concurrent tasks.</p>
 <p>Typical usage:</p>
-<p><code class="docutils literal notranslate"><span class="pre">srun</span> <span class="pre">-n</span> <span class="pre">4</span> <span class="pre">hostname</span></code></p>
-<p>In this case the command <code class="docutils literal notranslate"><span class="pre">hostname</span></code> is only executed four times. Consequently, one <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> script can have multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code> commands, which are either executed in serial or in parallel. For example:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>srun<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><span class="w"> </span>hostname
+</pre></div>
+</div>
+<p>In this case the command <code class="docutils literal notranslate"><span class="pre">hostname</span></code> is executed four times, once per task. One <code class="docutils literal notranslate"><span class="pre">sbatch</span></code> script can contain multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code> commands executed either in serial or in parallel using the shell’s background operator <code class="docutils literal notranslate"><span class="pre">&amp;</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
 <span class="c1">#SBATCH --output=time.out</span>
 <span class="c1">#SBATCH --error=error.out</span>
@@ -418,37 +433,44 @@ srun<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><s
 <span class="nb">wait</span>
 </pre></div>
 </div>
+<p>The <code class="docutils literal notranslate"><span class="pre">wait</span></code> at the end ensures the batch script does not exit (and release the allocation) before both <code class="docutils literal notranslate"><span class="pre">srun</span></code> calls have finished.</p>
 <p>Common use cases:</p>
 <ul class="simple">
 <li><p>launching MPI applications</p></li>
-<li><p>interactive execution</p></li>
-<li><p>starting multiple tasks within one allocation</p></li>
+<li><p>interactive execution within an allocation obtained via <code class="docutils literal notranslate"><span class="pre">salloc</span></code></p></li>
+<li><p>starting multiple tasks within one allocation to maximise node utilisation</p></li>
 </ul>
-<p>srun is frequently used:</p>
+<p><code class="docutils literal notranslate"><span class="pre">srun</span></code> is frequently used:</p>
 <ul class="simple">
-<li><p>inside batch scripts submitted with sbatch</p></li>
-<li><p>interactively after obtaining an allocation</p></li>
+<li><p>inside batch scripts submitted with <code class="docutils literal notranslate"><span class="pre">sbatch</span></code></p></li>
+<li><p>interactively after obtaining an allocation with <code class="docutils literal notranslate"><span class="pre">salloc</span></code></p></li>
 </ul>
-<p>Again, a list of all available options is available as part of the <a class="reference external" href="https://slurm.schedmd.com/srun.html">SLURM documentation</a>.</p>
+<p>A full list of options is available in the <a class="reference external" href="https://slurm.schedmd.com/srun.html">SLURM documentation</a>.</p>
 </section>
 <section id="squeue">
 <h2><code class="docutils literal notranslate"><span class="pre">squeue</span></code><a class="headerlink" href="#squeue" title="Link to this heading">#</a></h2>
 <p>Inspect the current scheduler queue.</p>
 <p>Typical usage:</p>
-<p><code class="docutils literal notranslate"><span class="pre">squeue</span> <span class="pre">-u</span> <span class="pre">$USER</span></code></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>squeue<span class="w"> </span>-u<span class="w"> </span><span class="nv">$USER</span>
+</pre></div>
+</div>
 <p>Shows:</p>
 <ul class="simple">
-<li><p>pending jobs</p></li>
-<li><p>running jobs</p></li>
-<li><p>job IDs</p></li>
-<li><p>node assignments</p></li>
-<li><p>queue status</p></li>
+<li><p>pending jobs (state <code class="docutils literal notranslate"><span class="pre">PD</span></code>) waiting in the queue</p></li>
+<li><p>running jobs (state <code class="docutils literal notranslate"><span class="pre">R</span></code>) currently using nodes</p></li>
+<li><p>job IDs, node assignments, and time limits</p></li>
+<li><p>queue (partition) information</p></li>
 </ul>
-<p>Further details are available as part of the <a class="reference external" href="https://slurm.schedmd.com/squeue.html">SLURM documentation</a>.</p>
+<p>To monitor a specific job repeatedly:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>watch<span class="w"> </span>-n<span class="w"> </span><span class="m">30</span><span class="w"> </span>squeue<span class="w"> </span>-u<span class="w"> </span><span class="nv">$USER</span>
+</pre></div>
+</div>
+<p>Further details are available in the <a class="reference external" href="https://slurm.schedmd.com/squeue.html">SLURM documentation</a>.</p>
 </section>
 <section id="mpi4py">
 <h2><code class="docutils literal notranslate"><span class="pre">mpi4py</span></code><a class="headerlink" href="#mpi4py" title="Link to this heading">#</a></h2>
-<p>The message passing interface (MPI) for Python is available in the <a class="reference external" href="https://mpi4py.readthedocs.io">mpi4py</a> package. It exposes the MPI communicator launched by SLURM. A typical MPI Python script is started with <code class="docutils literal notranslate"><span class="pre">srun</span></code>:</p>
+<p>The <a class="reference external" href="https://www.mpi-forum.org">Message Passing Interface (MPI)</a> is the dominant parallelisation standard on HPC systems. It allows many independent processes — potentially spread across many compute nodes — to communicate by explicitly passing data <em>messages</em>. The Python binding for MPI is provided by the <a class="reference external" href="https://mpi4py.readthedocs.io">mpi4py</a> package. <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> exposes the MPI communicator that SLURM (via <code class="docutils literal notranslate"><span class="pre">srun</span></code>) or Flux (via <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code>) creates when launching parallel tasks.</p>
+<p>A typical MPI Python script is started with <code class="docutils literal notranslate"><span class="pre">srun</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
 <span class="c1">#SBATCH --output=time.out</span>
 <span class="c1">#SBATCH --error=error.out</span>
@@ -462,7 +484,7 @@ srun<span class="w"> </span>-n<span class="w"> </span><span class="m">4</span><s
 srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">8</span><span class="w"> </span>python<span class="w"> </span>script.py
 </pre></div>
 </div>
-<p>Depending on your version of MPI you might need to specify the MPI backend using <code class="docutils literal notranslate"><span class="pre">--mpi</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--mpi=pmix</span></code> flag tells SLURM which PMI (Process Management Interface) library to use for bootstrapping the MPI ranks. The correct value depends on how MPI was compiled on the cluster; <code class="docutils literal notranslate"><span class="pre">pmix</span></code> is common with OpenMPI 5+ and with Flux. If in doubt, check your cluster’s documentation or try <code class="docutils literal notranslate"><span class="pre">--mpi=pmi2</span></code>.</p>
 <p>Inside the Python script <code class="docutils literal notranslate"><span class="pre">script.py</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mpi4py</span><span class="w"> </span><span class="kn">import</span> <span class="n">MPI</span>
 <span class="n">comm</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span>
@@ -471,7 +493,7 @@ srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </
 <span class="nb">print</span><span class="p">(</span><span class="n">rank</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The result of this script is the list of task ranks and the total number of tasks:</p>
+<p>Every MPI process runs the same Python script. Each process has a unique <code class="docutils literal notranslate"><span class="pre">rank</span></code> (integer from 0 to <code class="docutils literal notranslate"><span class="pre">size</span> <span class="pre">-</span> <span class="pre">1</span></code>) and all processes share the same <code class="docutils literal notranslate"><span class="pre">size</span></code> (the total number of MPI tasks). The result of this script is a list of <code class="docutils literal notranslate"><span class="pre">(rank,</span> <span class="pre">size)</span></code> pairs printed in non-deterministic order:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2</span> <span class="mi">8</span>
 <span class="mi">0</span> <span class="mi">8</span>
 <span class="mi">4</span> <span class="mi">8</span>
@@ -482,9 +504,13 @@ srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </
 <span class="mi">7</span> <span class="mi">8</span>
 </pre></div>
 </div>
-<p>If the script only returns eight entries of <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span></code> then the MPI backend is not correctly configured.</p>
+<blockquote>
+<div><p><strong>Troubleshooting:</strong> If the script only returns eight entries of <code class="docutils literal notranslate"><span class="pre">0</span> <span class="pre">1</span></code> then the MPI backend is not correctly configured — each process is seeing its own private <code class="docutils literal notranslate"><span class="pre">MPI_COMM_WORLD</span></code> of size 1 instead of the shared communicator. This typically means the <code class="docutils literal notranslate"><span class="pre">--mpi</span></code> flag is wrong, or that the <code class="docutils literal notranslate"><span class="pre">mpi4py</span></code> installation was not compiled against the same MPI library that <code class="docutils literal notranslate"><span class="pre">srun</span></code> uses.</p>
+</div></blockquote>
+<hr class="docutils" />
 <section id="option-1-split-the-allocation-with-multiple-srun-calls">
-<h3>Option 1: Split the Allocation with Multiple srun Calls<a class="headerlink" href="#option-1-split-the-allocation-with-multiple-srun-calls" title="Link to this heading">#</a></h3>
+<h3>Option 1: Split the Allocation with Multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code> Calls<a class="headerlink" href="#option-1-split-the-allocation-with-multiple-srun-calls" title="Link to this heading">#</a></h3>
+<p>Run two independent four-task MPI jobs within the same eight-task allocation:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
 <span class="c1">#SBATCH --output=time.out</span>
 <span class="c1">#SBATCH --error=error.out</span>
@@ -500,8 +526,7 @@ srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </
 <span class="nb">wait</span>
 </pre></div>
 </div>
-<p>This starts two independent MPI jobs inside the same SLURM allocation.</p>
-<p>Each script sees its own <code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD</span></code> and the resulting output is:</p>
+<p>Each <code class="docutils literal notranslate"><span class="pre">srun</span></code> launches a completely separate MPI job. Each script sees its own <code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD</span></code> of size 4 and the output is:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">2</span> <span class="mi">4</span>
 <span class="mi">3</span> <span class="mi">4</span>
 <span class="mi">1</span> <span class="mi">4</span>
@@ -512,18 +537,15 @@ srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </
 <span class="mi">3</span> <span class="mi">4</span>
 </pre></div>
 </div>
-<p>This is useful when launching separate applications or executables. However, many repeated srun calls can create scheduler/launcher overhead and may cause contention on some systems.</p>
+<p><strong>When to choose this:</strong> Running separate programs or executables, or when the two tasks have no need to exchange data with each other.</p>
+<p><strong>Potential pitfall:</strong> Many <code class="docutils literal notranslate"><span class="pre">srun</span></code> launches within a single allocation can create scheduler and MPI launcher overhead. On some systems this also causes contention when many jobs do the same thing simultaneously (a common HPC workflow pattern).</p>
 </section>
 <section id="option-2-use-one-srun-and-split-communicators-in-python">
-<h3>Option 2: Use One srun and Split Communicators in Python<a class="headerlink" href="#option-2-use-one-srun-and-split-communicators-in-python" title="Link to this heading">#</a></h3>
+<h3>Option 2: Use One <code class="docutils literal notranslate"><span class="pre">srun</span></code> and Split Communicators in Python<a class="headerlink" href="#option-2-use-one-srun-and-split-communicators-in-python" title="Link to this heading">#</a></h3>
+<p>Use a single <code class="docutils literal notranslate"><span class="pre">srun</span></code> to start all eight MPI processes, then divide <code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD</span></code> into logical sub-groups inside the Python script:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
 <span class="c1">#SBATCH --output=time.out</span>
-<span class="c1">#SBATCH --error=error.out</span>
-<span class="c1">#SBATCH --job-name=test</span>
-<span class="c1">#SBATCH --chdir=/u/janj/slurmtest</span>
-<span class="c1">#SBATCH --get-user-env=L</span>
-<span class="c1">#SBATCH --partition=s.cmfe</span>
-<span class="c1">#SBATCH --time=60</span>
+...
 <span class="c1">#SBATCH --ntasks=8</span>
 
 srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </span>-n<span class="w"> </span><span class="m">8</span><span class="w"> </span>python<span class="w"> </span>script.py
@@ -549,16 +571,34 @@ srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </
     <span class="n">task</span><span class="p">(</span><span class="n">subcomm</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Now there is only one MPI launch. The Python script divides <code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD</span></code> into smaller communicators.</p>
-<p>Each task receives a communicator of size 4:</p>
-<p><code class="docutils literal notranslate"><span class="pre">subcomm.Get_size()</span></code></p>
-<p>Key Difference:</p>
-<ul class="simple">
-<li><p>Multiple srun calls create multiple independent MPI jobs.</p></li>
-<li><p>Splitting communicators creates one MPI job with multiple logical MPI groups inside it.</p></li>
-<li><p>Use multiple srun calls when you need separate programs, environments, or executables.</p></li>
-<li><p>Use communicator splitting when the workflow is controlled from one Python script and the tasks can share one MPI launch.</p></li>
-</ul>
+<p><code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD.Split()</span></code> creates a new communicator that contains only the processes assigned the same <code class="docutils literal notranslate"><span class="pre">color</span></code>. Processes with <code class="docutils literal notranslate"><span class="pre">color=0</span></code> (ranks 0–3) form one sub-communicator of size 4; processes with <code class="docutils literal notranslate"><span class="pre">color=1</span></code> (ranks 4–7) form another.</p>
+<p><strong>When to choose this:</strong> All tasks are driven from one Python script and can share a single MPI launch. This approach has lower startup overhead and allows ranks to exchange data across groups using the parent <code class="docutils literal notranslate"><span class="pre">MPI.COMM_WORLD</span></code> communicator if needed.</p>
+<p><strong>Key difference summary:</strong></p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Approach</p></th>
+<th class="head"><p>MPI launches</p></th>
+<th class="head"><p>Can exchange data across groups?</p></th>
+<th class="head"><p>Best for</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code></p></td>
+<td><p>One per group</p></td>
+<td><p>No (separate MPI jobs)</p></td>
+<td><p>Different executables or programs</p></td>
+</tr>
+<tr class="row-odd"><td><p>Communicator split</p></td>
+<td><p>One total</p></td>
+<td><p>Yes (via <code class="docutils literal notranslate"><span class="pre">COMM_WORLD</span></code>)</p></td>
+<td><p>Same script, coordinated workflow</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<blockquote>
+<div><p><strong>Looking ahead:</strong> Managing dozens or hundreds of these <code class="docutils literal notranslate"><span class="pre">srun</span></code> calls by hand quickly becomes unmanageable. The next notebooks introduce <code class="docutils literal notranslate"><span class="pre">executorlib</span></code>, which automates this scheduling on a <em>per-Python-function</em> level so you can focus on science rather than job scripts.</p>
+</div></blockquote>
 </section>
 </section>
 </section>
@@ -633,8 +673,8 @@ srun<span class="w"> </span>--mpi<span class="o">=</span>pmix<span class="w"> </
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#srun"><code class="docutils literal notranslate"><span class="pre">srun</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#squeue"><code class="docutils literal notranslate"><span class="pre">squeue</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mpi4py"><code class="docutils literal notranslate"><span class="pre">mpi4py</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-split-the-allocation-with-multiple-srun-calls">Option 1: Split the Allocation with Multiple srun Calls</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-use-one-srun-and-split-communicators-in-python">Option 2: Use One srun and Split Communicators in Python</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-split-the-allocation-with-multiple-srun-calls">Option 1: Split the Allocation with Multiple <code class="docutils literal notranslate"><span class="pre">srun</span></code> Calls</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-use-one-srun-and-split-communicators-in-python">Option 2: Use One <code class="docutils literal notranslate"><span class="pre">srun</span></code> and Split Communicators in Python</a></li>
 </ul>
 </li>
 </ul>
