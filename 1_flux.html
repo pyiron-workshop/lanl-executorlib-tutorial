@@ -555,15 +555,15 @@ flux<span class="w"> </span>job<span class="w"> </span>attach<span class="w"> </
 </div></blockquote>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">lines</span> <span class="o">=</span> <span class="s2">"""</span><span class="se">\</span>
 <span class="s2">from mpi4py import MPI</span>
 <span class="s2">comm = MPI.COMM_WORLD</span>
 <span class="s2">rank = comm.Get_rank()</span>
 <span class="s2">size = comm.Get_size()</span>
 <span class="s2">print(rank, size)</span>
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">"""</span>
 
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;script.py&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"script.py"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -718,7 +718,7 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 <p>This launches one MPI job of size 8 and divides it into two logical communicators of size 4. See the SLURM notebook for a detailed discussion of when to prefer this approach over multiple <code class="docutils literal notranslate"><span class="pre">flux</span> <span class="pre">run</span></code> calls.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mpi_lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">mpi_lines</span> <span class="o">=</span> <span class="s2">"""</span><span class="se">\</span>
 <span class="s2">from mpi4py import MPI</span>
 
 <span class="s2">def task(comm):</span>
@@ -736,9 +736,9 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 <span class="s2">else:</span>
 <span class="s2">    # ranks 4–7 run task B</span>
 <span class="s2">    task(subcomm)</span>
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">"""</span>
 
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;mpisplit.py&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"mpisplit.py"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">mpi_lines</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -773,7 +773,7 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 <span class="n">jobid</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
     <span class="n">flux</span><span class="o">.</span><span class="n">Flux</span><span class="p">(),</span>
     <span class="n">jobspec</span><span class="o">=</span><span class="n">flux</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">JobspecV1</span><span class="o">.</span><span class="n">from_command</span><span class="p">(</span>
-        <span class="n">command</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hostname&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">[</span><span class="s2">"hostname"</span><span class="p">],</span>
         <span class="n">num_tasks</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">)</span>
@@ -793,7 +793,7 @@ flux<span class="w"> </span>run<span class="w"> </span>-o<span class="w"> </span
 <span class="n">jobid</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
     <span class="n">flux</span><span class="o">.</span><span class="n">Flux</span><span class="p">(),</span>
     <span class="n">jobspec</span><span class="o">=</span><span class="n">flux</span><span class="o">.</span><span class="n">job</span><span class="o">.</span><span class="n">JobspecV1</span><span class="o">.</span><span class="n">from_command</span><span class="p">(</span>
-        <span class="n">command</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;hostname&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">[</span><span class="s2">"hostname"</span><span class="p">],</span>
         <span class="n">num_tasks</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
     <span class="p">),</span>
 <span class="p">)</span>
@@ -930,7 +930,7 @@ By Jan Janssen
 
   <p class="copyright">
     
-      © Copyright 2023.
+      © Copyright 2026.
       <br/>
     
   </p>

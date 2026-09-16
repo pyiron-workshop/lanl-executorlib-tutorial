@@ -631,7 +631,7 @@ Use it when individual function calls are long (minutes to hours), when you want
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cache_data</span>
 
-<span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">get_cache_data</span><span class="p">(</span><span class="n">cache_directory</span><span class="o">=</span><span class="s2">&quot;executorlib_cache&quot;</span><span class="p">))</span>
+<span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">get_cache_data</span><span class="p">(</span><span class="n">cache_directory</span><span class="o">=</span><span class="s2">"executorlib_cache"</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -762,7 +762,7 @@ Use it when individual function calls are long (minutes to hours), when you want
 <p>The template below demonstrates the pattern for Flux. For SLURM you would replace the <code class="docutils literal notranslate"><span class="pre">#</span> <span class="pre">flux:</span></code> comment directives with <code class="docutils literal notranslate"><span class="pre">#SBATCH</span></code> lines:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">submission_template</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">submission_template</span> <span class="o">=</span> <span class="s2">"""</span><span class="se">\</span>
 <span class="s2">#!/bin/bash</span>
 <span class="s2"># flux: --job-name={{job_name}}</span>
 <span class="s2"># flux: --env=CORES={{cores}}</span>
@@ -779,7 +779,7 @@ Use it when individual function calls are long (minutes to hours), when you want
 <span class="s2">{</span><span class="si">%- e</span><span class="s2">ndif %}</span>
 
 <span class="s2">{{command}}</span>
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">"""</span>
 </pre></div>
 </div>
 </div>
@@ -791,7 +791,7 @@ Use it when individual function calls are long (minutes to hours), when you want
 <span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">):</span>
-        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;submission_template&quot;</span><span class="p">:</span> <span class="n">submission_template</span><span class="p">}))</span>
+        <span class="n">future_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span><span class="p">],</span> <span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">"submission_template"</span><span class="p">:</span> <span class="n">submission_template</span><span class="p">}))</span>
 
     <span class="nb">print</span><span class="p">([</span><span class="n">f</span><span class="o">.</span><span class="n">done</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">future_lst</span><span class="p">])</span>
 
@@ -868,8 +868,8 @@ Use it when individual function calls are long (minutes to hours), when you want
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxClusterExecutor</span>
 
-<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
-    <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">calc_mpi</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;cores&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
+<span class="k">with</span> <span class="n">FluxClusterExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">"pmix"</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">calc_mpi</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">"cores"</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
 </pre></div>
 </div>
@@ -1006,13 +1006,13 @@ Use it for high-throughput workflows with many short tasks (seconds to minutes e
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
 
-<span class="n">df</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"a"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">"b"</span><span class="p">:</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]})</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">sum_df</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
 
 <span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">block_allocation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_workers</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">sum_df</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">]))</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">"c"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">exe</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">sum_df</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s2">"a"</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="s2">"b"</span><span class="p">]))</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -1039,9 +1039,9 @@ Use it for high-throughput workflows with many short tasks (seconds to minutes e
 <p>The <code class="docutils literal notranslate"><span class="pre">init_function</span></code> must return a <strong>dictionary</strong>. Each key in that dictionary becomes an additional keyword argument in every function submitted to the executor. In the example below, <code class="docutils literal notranslate"><span class="pre">init_file_handle()</span></code> opens a file and returns <code class="docutils literal notranslate"><span class="pre">{&quot;file_handle&quot;:</span> <span class="pre">&lt;iterator&gt;}</span></code>, which means every submitted function automatically receives a <code class="docutils literal notranslate"><span class="pre">file_handle</span></code> keyword argument.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;large.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"large.txt"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1050,10 +1050,10 @@ Use it for high-throughput workflows with many short tasks (seconds to minutes e
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">init_file_handle</span><span class="p">():</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">open_large_file</span><span class="p">():</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;large.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"large.txt"</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;file_handle&quot;</span><span class="p">:</span> <span class="n">open_large_file</span><span class="p">()}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"file_handle"</span><span class="p">:</span> <span class="n">open_large_file</span><span class="p">()}</span>
 </pre></div>
 </div>
 </div>
@@ -1076,7 +1076,7 @@ Use it for high-throughput workflows with many short tasks (seconds to minutes e
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;0&#39;, &#39;1&#39;, &#39;2&#39;, &#39;3&#39;, &#39;4&#39;] [&#39;5&#39;, &#39;6&#39;, &#39;7&#39;, &#39;8&#39;, &#39;9&#39;, &#39;10&#39;, &#39;11&#39;, &#39;12&#39;, &#39;13&#39;, &#39;14&#39;]
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>['0', '1', '2', '3', '4'] ['5', '6', '7', '8', '9', '10', '11', '12', '13', '14']
 </pre></div>
 </div>
 </div>
@@ -1109,7 +1109,7 @@ Use it for high-throughput workflows with many short tasks (seconds to minutes e
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">calc_nested</span><span class="p">():</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">executorlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">FluxJobExecutor</span>
 
-    <span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">"pmix"</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
         <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">fs</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
 </pre></div>
@@ -1118,7 +1118,7 @@ Use it for high-throughput workflows with many short tasks (seconds to minutes e
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">&quot;pmix&quot;</span><span class="p">,</span> <span class="n">flux_executor_nesting</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">FluxJobExecutor</span><span class="p">(</span><span class="n">pmi_mode</span><span class="o">=</span><span class="s2">"pmix"</span><span class="p">,</span> <span class="n">flux_executor_nesting</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="n">fs</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">calc_nested</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
 </pre></div>
@@ -1242,7 +1242,7 @@ By Jan Janssen
 
   <p class="copyright">
     
-      © Copyright 2023.
+      © Copyright 2026.
       <br/>
     
   </p>

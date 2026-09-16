@@ -440,7 +440,7 @@ Received dictionary of size: 58
 <p>A <code class="docutils literal notranslate"><span class="pre">try</span></code> / <code class="docutils literal notranslate"><span class="pre">except</span></code> block is used here to prevent the notebook cell from stopping with an unhandled exception. In a real workflow you would not need this — the error is captured in the log file and the <code class="docutils literal notranslate"><span class="pre">Future</span></code> object for the failed call will raise the exception only when <code class="docutils literal notranslate"><span class="pre">.result()</span></code> is called on that specific future. All other futures remain unaffected.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">SingleNodeExecutor</span><span class="p">(</span><span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;error_log_file&quot;</span><span class="p">:</span> <span class="s2">&quot;error.out&quot;</span><span class="p">})</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">SingleNodeExecutor</span><span class="p">(</span><span class="n">resource_dict</span><span class="o">=</span><span class="p">{</span><span class="s2">"error_log_file"</span><span class="p">:</span> <span class="s2">"error.out"</span><span class="p">})</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="n">future_lst</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
@@ -461,7 +461,7 @@ Received dictionary of size: 58
 <p>This allows you to reproduce the exact failing call in an interactive session and debug it without having to re-run the entire parameter sweep.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;error.out&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"error.out"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">content</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -474,32 +474,32 @@ Received dictionary of size: 58
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;function: &lt;function my_funct at 0x7fd2361cf740&gt;\n&#39;,
- &#39;args: ()\n&#39;,
- &quot;kwargs: {&#39;i&#39;: 2, &#39;j&#39;: 2}\n&quot;,
- &#39;Traceback (most recent call last):\n&#39;,
- &#39;  File &quot;/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/backend/interactive_serial.py&quot;, line 56, in main\n&#39;,
- &#39;    output = call_funct(input_dict=input_dict, funct=None, memory=memory)\n&#39;,
- &#39;  File &quot;/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py&quot;, line 33, in call_funct\n&#39;,
- &#39;    return funct(input_dict[&quot;fn&quot;], *input_dict[&quot;args&quot;], **input_dict[&quot;kwargs&quot;])\n&#39;,
- &#39;  File &quot;/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py&quot;, line 22, in funct\n&#39;,
- &#39;    return args[0].__call__(*args[1:], **kwargs)\n&#39;,
- &#39;           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n&#39;,
- &#39;  File &quot;/tmp/ipykernel_2748/3167739528.py&quot;, line 3, in my_funct\n&#39;,
- &#39;ValueError\n&#39;,
- &#39;function: &lt;function my_funct at 0x7fdbccaff740&gt;\n&#39;,
- &#39;args: ()\n&#39;,
- &quot;kwargs: {&#39;i&#39;: 2, &#39;j&#39;: 2}\n&quot;,
- &#39;Traceback (most recent call last):\n&#39;,
- &#39;  File &quot;/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/backend/interactive_serial.py&quot;, line 56, in main\n&#39;,
- &#39;    output = call_funct(input_dict=input_dict, funct=None, memory=memory)\n&#39;,
- &#39;  File &quot;/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py&quot;, line 33, in call_funct\n&#39;,
- &#39;    return funct(input_dict[&quot;fn&quot;], *input_dict[&quot;args&quot;], **input_dict[&quot;kwargs&quot;])\n&#39;,
- &#39;  File &quot;/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py&quot;, line 22, in funct\n&#39;,
- &#39;    return args[0].__call__(*args[1:], **kwargs)\n&#39;,
- &#39;           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n&#39;,
- &#39;  File &quot;/tmp/ipykernel_3165/3167739528.py&quot;, line 3, in my_funct\n&#39;,
- &#39;ValueError\n&#39;]
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>['function: &lt;function my_funct at 0x7fd2361cf740&gt;\n',
+ 'args: ()\n',
+ "kwargs: {'i': 2, 'j': 2}\n",
+ 'Traceback (most recent call last):\n',
+ '  File "/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/backend/interactive_serial.py", line 56, in main\n',
+ '    output = call_funct(input_dict=input_dict, funct=None, memory=memory)\n',
+ '  File "/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py", line 33, in call_funct\n',
+ '    return funct(input_dict["fn"], *input_dict["args"], **input_dict["kwargs"])\n',
+ '  File "/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py", line 22, in funct\n',
+ '    return args[0].__call__(*args[1:], **kwargs)\n',
+ '           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n',
+ '  File "/tmp/ipykernel_2748/3167739528.py", line 3, in my_funct\n',
+ 'ValueError\n',
+ 'function: &lt;function my_funct at 0x7fdbccaff740&gt;\n',
+ 'args: ()\n',
+ "kwargs: {'i': 2, 'j': 2}\n",
+ 'Traceback (most recent call last):\n',
+ '  File "/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/backend/interactive_serial.py", line 56, in main\n',
+ '    output = call_funct(input_dict=input_dict, funct=None, memory=memory)\n',
+ '  File "/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py", line 33, in call_funct\n',
+ '    return funct(input_dict["fn"], *input_dict["args"], **input_dict["kwargs"])\n',
+ '  File "/srv/conda/envs/notebook/lib/python3.13/site-packages/executorlib/standalone/interactive/backend.py", line 22, in funct\n',
+ '    return args[0].__call__(*args[1:], **kwargs)\n',
+ '           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\n',
+ '  File "/tmp/ipykernel_3165/3167739528.py", line 3, in my_funct\n',
+ 'ValueError\n']
 </pre></div>
 </div>
 </div>
@@ -518,7 +518,7 @@ Received dictionary of size: 58
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">executorlib.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">TestClusterExecutor</span>
 
-<span class="k">with</span> <span class="n">TestClusterExecutor</span><span class="p">(</span><span class="n">cache_directory</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
+<span class="k">with</span> <span class="n">TestClusterExecutor</span><span class="p">(</span><span class="n">cache_directory</span><span class="o">=</span><span class="s2">"test"</span><span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="n">future</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="nb">sum</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
 </pre></div>
@@ -572,7 +572,7 @@ Received dictionary of size: 58
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">SingleNodeExecutor</span><span class="p">()</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="n">future</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
         <span class="n">execute_shell_command</span><span class="p">,</span>
-        <span class="p">[</span><span class="s2">&quot;echo&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">"echo"</span><span class="p">,</span> <span class="s2">"test"</span><span class="p">],</span>
         <span class="n">universal_newlines</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">shell</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
@@ -599,23 +599,23 @@ Received dictionary of size: 58
 <p>The example here uses a simple Python script <code class="docutils literal notranslate"><span class="pre">count.py</span></code> as a stand-in for any external executable — in practice this could be a Fortran REPL, a compiled solver, or any program that reads commands from <code class="docutils literal notranslate"><span class="pre">stdin</span></code> and writes results to <code class="docutils literal notranslate"><span class="pre">stdout</span></code>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">count_script</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">count_script</span> <span class="o">=</span> <span class="s2">"""</span><span class="se">\</span>
 <span class="s2">def count(iterations):</span>
 <span class="s2">    for i in range(int(iterations)):</span>
 <span class="s2">        print(i)</span>
-<span class="s2">    print(&quot;done&quot;)</span>
+<span class="s2">    print("done")</span>
 
 
-<span class="s2">if __name__ == &quot;__main__&quot;:</span>
+<span class="s2">if __name__ == "__main__":</span>
 <span class="s2">    while True:</span>
 <span class="s2">        user_input = input()</span>
-<span class="s2">        if &quot;shutdown&quot; in user_input:</span>
+<span class="s2">        if "shutdown" in user_input:</span>
 <span class="s2">            break</span>
 <span class="s2">        else:</span>
 <span class="s2">            count(iterations=int(user_input))</span>
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">"""</span>
 
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;count.py&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">"count.py"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">count_script</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -629,8 +629,8 @@ Received dictionary of size: 58
     <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;process&quot;</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
-            <span class="p">[</span><span class="s2">&quot;python&quot;</span><span class="p">,</span> <span class="s2">&quot;count.py&quot;</span><span class="p">],</span>
+        <span class="s2">"process"</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">"python"</span><span class="p">,</span> <span class="s2">"count.py"</span><span class="p">],</span>
             <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
             <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
             <span class="n">universal_newlines</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -654,7 +654,7 @@ Received dictionary of size: 58
     <span class="n">process</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">shell_input</span><span class="p">)</span>
     <span class="n">process</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
     <span class="n">lines_count</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">output</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
         <span class="n">output_current</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
         <span class="n">output</span> <span class="o">+=</span> <span class="n">output_current</span>
@@ -672,7 +672,7 @@ Received dictionary of size: 58
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">shutdown</span><span class="p">(</span><span class="n">process</span><span class="p">):</span>
-    <span class="n">process</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;shutdown</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">process</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">"shutdown</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">process</span><span class="o">.</span><span class="n">stdin</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -688,7 +688,7 @@ Received dictionary of size: 58
     <span class="n">block_allocation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="k">as</span> <span class="n">exe</span><span class="p">:</span>
     <span class="n">future</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
-        <span class="n">interact</span><span class="p">,</span> <span class="n">shell_input</span><span class="o">=</span><span class="s2">&quot;4</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">lines_to_read</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">stop_read_pattern</span><span class="o">=</span><span class="kc">None</span>
+        <span class="n">interact</span><span class="p">,</span> <span class="n">shell_input</span><span class="o">=</span><span class="s2">"4</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">lines_to_read</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">stop_read_pattern</span><span class="o">=</span><span class="kc">None</span>
     <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">())</span>
     <span class="n">future_shutdown</span> <span class="o">=</span> <span class="n">exe</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">shutdown</span><span class="p">)</span>
@@ -801,7 +801,7 @@ By Jan Janssen
 
   <p class="copyright">
     
-      © Copyright 2023.
+      © Copyright 2026.
       <br/>
     
   </p>
